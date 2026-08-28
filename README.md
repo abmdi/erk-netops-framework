@@ -1,5 +1,10 @@
 # Enterprise Hybrid-Cloud NetOps & Infrastructure Framework (`erk-netops-framework`)
 
+![License](https://img.shields.io/github/license/abmdi/erk-netops-framework?color=blue)
+![Terraform](https://img.shields.io/badge/Terraform-1.5+-purple)
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
+
 A production-ready reference architecture and automation framework for Enterprise Hybrid Cloud environments, Network Infrastructure as Code (NIaC), Zero Trust Security, and Automated Observability.
 
 ---
