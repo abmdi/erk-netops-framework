@@ -1,0 +1,5 @@
+apiVersion: v2
+name: nginx-deployment
+description: A Helm chart for deploying Nginx on Kubernetes
+version: 0.1.0
+appVersion: "1.19.0"
