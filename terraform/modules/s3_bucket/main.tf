@@ -1,35 +1,18 @@
-hcl
-// Define a Terraform module for creating an AWS S3 bucket
-module "s3_bucket" {
-  source = "./modules/s3_bucket"
-
-  bucket_name = var.bucket_name
-  tags        = var.tags
+provider "aws" {
+  # Configure the AWS provider with the region
+  region = var.aws_region
 }
 
-// Declare a variable for the bucket name
-variable "bucket_name" {
-  description = "The name of the S3 bucket"
-  type        = string
-}
-
-// Declare a variable for tags
-variable "tags" {
-  description = "A map of tags to assign to the bucket"
-  type        = map(string)
-  default     = {}
-}
-
-// Create an S3 bucket resource
-resource "aws_s3_bucket" "this" {
+resource "aws_s3_bucket" "bucket" {
+  # Define the S3 bucket name
   bucket = var.bucket_name
 
-  // Enable bucket versioning
+  # Enable bucket versioning for data protection
   versioning {
     enabled = true
   }
 
-  // Enable server-side encryption using the AES256 algorithm
+  # Enable server-side encryption by default
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -38,12 +21,33 @@ resource "aws_s3_bucket" "this" {
     }
   }
 
-  // Add tags to the bucket
-  tags = var.tags
+  # Block public access to the bucket
+  block_public_access {
+    block_public_acls       = true
+    block_public_policy     = true
+    ignore_public_acls      = true
+    restrict_public_buckets = true
+  }
+
+  # Tag the bucket for identification and management
+  tags = {
+    Name        = var.bucket_name
+    Environment = var.environment
+  }
 }
 
-// Output the bucket name
-output "bucket_name" {
-  description = "The name of the created S3 bucket"
-  value       = aws_s3_bucket.this.bucket
+# Define input variables
+variable "aws_region" {
+  description = "The AWS region to deploy resources into"
+  type        = string
+}
+
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+}
+
+variable "environment" {
+  description = "The environment for the bucket (e.g., dev, prod)"
+  type        = string
 }
