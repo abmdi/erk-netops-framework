@@ -1,0 +1,41 @@
+---
+- name: Configure Nginx on Ubuntu Servers
+  hosts: webservers
+  become: yes
+  vars:
+    nginx_conf_path: /etc/nginx/sites-available/default
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      tags: update
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+      tags: install
+
+    - name: Ensure Nginx is started and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      tags: service
+
+    - name: Deploy custom Nginx configuration
+      template:
+        src: templates/nginx.conf.j2
+        dest: "{{ nginx_conf_path }}"
+      notify:
+        - Reload Nginx
+      tags: config
+
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
+---
