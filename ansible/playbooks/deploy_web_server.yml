@@ -1,0 +1,37 @@
+yaml
+---
+- name: Deploy a secure web server on Ubuntu
+  hosts: web_servers
+  become: yes  # Run tasks with elevated privileges
+  vars:
+    # Define variables for package names and configuration settings
+    web_packages:
+      - apache2
+      - ufw
+    service_name: apache2
+    firewall_ports: [80, 443]
+
+  tasks:
+    - name: Ensure web server packages are installed
+      apt:
+        name: "{{ web_packages }}"
+        state: present
+        update_cache: yes  # Update APT package index before installing
+
+    - name: Start and enable Apache service
+      systemd:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes  # Ensure the service starts on boot
+
+    - name: Open firewall ports for HTTP and HTTPS
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ firewall_ports }}"
+    
+    - name: Enable UFW firewall
+      ufw:
+        state: enabled
+        policy: deny  # Default deny policy for incoming traffic
