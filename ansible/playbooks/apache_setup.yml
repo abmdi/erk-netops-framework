@@ -1,0 +1,48 @@
+- name: Configure Apache Web Server
+  hosts: webservers
+  become: yes
+  vars:
+    apache_packages:
+      - apache2
+    service_name: apache2
+
+  tasks:
+    - name: Ensure Apache is installed
+      apt:
+        name: "{{ apache_packages }}"
+        state: present
+        update_cache: yes
+
+    - name: Ensure Apache service is enabled and running
+      service:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+
+    - name: Deploy custom index.html
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Welcome to Apache!</title>
+          </head>
+          <body>
+            <h1>Success! Apache is configured correctly.</h1>
+          </body>
+          </html>
+
+    - name: Ensure UFW is installed
+      apt:
+        name: ufw
+        state: present
+
+    - name: Allow 'Apache Full' profile through UFW
+      ufw:
+        rule: allow
+        name: 'Apache Full'
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
