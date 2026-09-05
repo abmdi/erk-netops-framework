@@ -1,18 +1,18 @@
 provider "aws" {
-  # Configure the AWS provider with the region
-  region = var.aws_region
+  # Specify the AWS region
+  region = var.region
 }
 
-resource "aws_s3_bucket" "bucket" {
-  # Define the S3 bucket name
+resource "aws_s3_bucket" "my_bucket" {
+  # Name of the S3 bucket
   bucket = var.bucket_name
 
-  # Enable bucket versioning for data protection
+  # Enable versioning for the bucket
   versioning {
     enabled = true
   }
 
-  # Enable server-side encryption by default
+  # Define server-side encryption configuration
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -24,30 +24,32 @@ resource "aws_s3_bucket" "bucket" {
   # Block public access to the bucket
   block_public_access {
     block_public_acls       = true
-    block_public_policy     = true
     ignore_public_acls      = true
+    block_public_policy     = true
     restrict_public_buckets = true
   }
 
-  # Tag the bucket for identification and management
   tags = {
+    # Tagging for resource identification and cost management
     Name        = var.bucket_name
     Environment = var.environment
   }
 }
 
-# Define input variables
-variable "aws_region" {
-  description = "The AWS region to deploy resources into"
+variable "region" {
+  # Define the AWS region for the S3 bucket
+  description = "The AWS region to deploy resources in"
   type        = string
 }
 
 variable "bucket_name" {
+  # Define the S3 bucket name
   description = "The name of the S3 bucket"
   type        = string
 }
 
 variable "environment" {
-  description = "The environment for the bucket (e.g., dev, prod)"
+  # Define the deployment environment (e.g., dev, prod)
+  description = "The environment for resource deployment"
   type        = string
 }
