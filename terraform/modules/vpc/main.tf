@@ -1,9 +1,12 @@
+hcl
 provider "aws" {
-  region = var.region
+  region = var.aws_region
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr_block
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
     Name = var.vpc_name
@@ -11,13 +14,23 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count = length(var.public_subnet_cidr_blocks)
-  vpc_id = aws_vpc.main.id
-  cidr_block = element(var.public_subnet_cidr_blocks, count.index)
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
+  availability_zone       = var.public_subnet_az
 
   tags = {
-    Name = "${var.vpc_name}-public-${count.index}"
+    Name = "${var.vpc_name}-public"
+  }
+}
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = var.private_subnet_az
+
+  tags = {
+    Name = "${var.vpc_name}-private"
   }
 }
 
@@ -43,36 +56,42 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = length(var.public_subnet_cidr_blocks)
-  subnet_id = element(aws_subnet.public[*].id, count.index)
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
 
-output "vpc_id" {
-  value = aws_vpc.main.id
-}
-
-output "public_subnet_ids" {
-  value = aws_subnet.public[*].id
-}
-
-# Variables
-variable "region" {
-  description = "The AWS region to deploy the VPC"
-  type = string
+# Variables for customization
+variable "aws_region" {
+  description = "The AWS region to deploy resources in"
+  type        = string
 }
 
 variable "vpc_cidr_block" {
   description = "The CIDR block for the VPC"
-  type = string
+  type        = string
 }
 
 variable "vpc_name" {
   description = "The name of the VPC"
-  type = string
+  type        = string
 }
 
-variable "public_subnet_cidr_blocks" {
-  description = "List of CIDR blocks for public subnets"
-  type = list(string)
+variable "public_subnet_cidr" {
+  description = "The CIDR block for the public subnet"
+  type        = string
+}
+
+variable "public_subnet_az" {
+  description = "The availability zone for the public subnet"
+  type        = string
+}
+
+variable "private_subnet_cidr" {
+  description = "The CIDR block for the private subnet"
+  type        = string
+}
+
+variable "private_subnet_az" {
+  description = "The availability zone for the private subnet"
+  type        = string
 }
