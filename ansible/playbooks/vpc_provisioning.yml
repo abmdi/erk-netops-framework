@@ -1,0 +1,82 @@
+- name: Provision AWS VPC
+  hosts: localhost
+  gather_facts: no
+  vars:
+    region: us-east-1
+    vpc_cidr: "10.0.0.0/16"
+    public_subnet_cidr: "10.0.1.0/24"
+    private_subnet_cidr: "10.0.2.0/24"
+    vpc_name: "production-vpc"
+    public_subnet_name: "public-subnet"
+    private_subnet_name: "private-subnet"
+    security_group_name: "default-sg"
+
+  tasks:
+    - name: Create VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ vpc_cidr }}"
+        region: "{{ region }}"
+        state: present
+      register: vpc
+
+    - name: Create Public Subnet
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ public_subnet_cidr }}"
+        region: "{{ region }}"
+        map_public: yes
+        state: present
+        tags:
+          Name: "{{ public_subnet_name }}"
+      register: public_subnet
+
+    - name: Create Private Subnet
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ private_subnet_cidr }}"
+        region: "{{ region }}"
+        map_public: no
+        state: present
+        tags:
+          Name: "{{ private_subnet_name }}"
+      register: private_subnet
+
+    - name: Create Security Group
+      amazon.aws.ec2_group:
+        name: "{{ security_group_name }}"
+        description: "Default security group"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+        state: present
+      register: security_group
+
+    - name: Allow SSH access on port 22
+      amazon.aws.ec2_group_rule:
+        group_id: "{{ security_group.group_id }}"
+        ip_protocol: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+        region: "{{ region }}"
+        state: present
+
+    - name: Allow HTTP access on port 80
+      amazon.aws.ec2_group_rule:
+        group_id: "{{ security_group.group_id }}"
+        ip_protocol: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+        region: "{{ region }}"
+        state: present
+
+    - name: Allow HTTPS access on port 443
+      amazon.aws.ec2_group_rule:
+        group_id: "{{ security_group.group_id }}"
+        ip_protocol: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: 0.0.0.0/0
+        region: "{{ region }}"
+        state: present
