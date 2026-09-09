@@ -4,15 +4,20 @@ provider "aws" {
   region = var.region
 }
 
-// Module to create an AWS Transit Gateway
-resource "aws_ec2_transit_gateway" "this" {
-  description = var.description
+// Create a Transit Gateway
+resource "aws_ec2_transit_gateway" "example" {
+  description = "Transit Gateway for connecting VPCs"
   tags = {
-    Name = var.name
+    Name = var.transit_gateway_name
   }
 }
 
-// Output the Transit Gateway ID
+// Define outputs for the Transit Gateway ID
 output "transit_gateway_id" {
-  value = aws_ec2_transit_gateway.this.id
+  description = "The ID of the Transit Gateway"
+  value       = aws_ec2_transit_gateway.example.id
 }
+```
+
+COMMIT_MSG: Add variables and outputs for Transit Gateway module
+FILE_PATH: terraform/modules/transit_gateway/variables.tf
