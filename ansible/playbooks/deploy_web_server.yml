@@ -1,37 +1,46 @@
 yaml
 ---
-- name: Deploy a secure web server on Ubuntu
+- name: Deploy and configure web server
   hosts: web_servers
-  become: yes  # Run tasks with elevated privileges
+  become: yes
   vars:
-    # Define variables for package names and configuration settings
-    web_packages:
-      - apache2
-      - ufw
-    service_name: apache2
-    firewall_ports: [80, 443]
+    http_port: 80
+    document_root: /var/www/html
 
   tasks:
-    - name: Ensure web server packages are installed
+    # Ensure Apache is installed
+    - name: Install Apache
       apt:
-        name: "{{ web_packages }}"
+        name: apache2
         state: present
-        update_cache: yes  # Update APT package index before installing
+        update_cache: yes
 
-    - name: Start and enable Apache service
-      systemd:
-        name: "{{ service_name }}"
+    # Ensure the Apache service is enabled and started
+    - name: Ensure Apache is running
+      service:
+        name: apache2
         state: started
-        enabled: yes  # Ensure the service starts on boot
+        enabled: yes
 
-    - name: Open firewall ports for HTTP and HTTPS
+    # Copy the web content to the document root
+    - name: Deploy web content
+      copy:
+        src: files/index.html
+        dest: "{{ document_root }}/index.html"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    # Configure the firewall to allow HTTP traffic
+    - name: Allow HTTP traffic through UFW
       ufw:
         rule: allow
-        port: "{{ item }}"
+        port: "{{ http_port }}"
         proto: tcp
-      loop: "{{ firewall_ports }}"
-    
-    - name: Enable UFW firewall
-      ufw:
-        state: enabled
-        policy: deny  # Default deny policy for incoming traffic
+
+  handlers:
+    # Restart Apache to apply any changes
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
