@@ -1,17 +1,11 @@
-hcl
 provider "aws" {
   region = var.region
 }
 
-resource "aws_s3_bucket" "this" {
+resource "aws_s3_bucket" "my_bucket" {
   bucket = var.bucket_name
 
-  # Enable versioning for the S3 bucket
-  versioning {
-    enabled = true
-  }
-
-  # Enable server-side encryption by default
+  # Enable default server-side encryption using AES-256
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -20,21 +14,41 @@ resource "aws_s3_bucket" "this" {
     }
   }
 
-  # Define a block policy to block public access
-  acl = "private"
+  # Block public access to the bucket
+  block_public_access {
+    block_public_acls       = true
+    block_public_policy     = true
+    ignore_public_acls      = true
+    restrict_public_buckets = true
+  }
 
-  tags = merge(
-    {
-      Name        = var.bucket_name
-      Environment = var.environment
-    },
-    var.tags
-  )
+  # Enable versioning to keep multiple variants of an object in the same bucket
+  versioning {
+    enabled = true
+  }
+
+  # Configure lifecycle rules to transition objects to STANDARD_IA class after 30 days
+  lifecycle_rule {
+    enabled = true
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    # Expire objects after 365 days
+    expiration {
+      days = 365
+    }
+  }
+
+  tags = {
+    Name        = var.bucket_name
+    Environment = var.environment
+  }
 }
 
-# Variables required for the S3 bucket creation
 variable "region" {
-  description = "AWS region where resources will be created"
+  description = "The AWS region to create resources in"
   type        = string
   default     = "us-east-1"
 }
@@ -45,12 +59,7 @@ variable "bucket_name" {
 }
 
 variable "environment" {
-  description = "The environment for which this bucket is created (e.g., dev, prod)"
+  description = "The environment for resource tagging"
   type        = string
-}
-
-variable "tags" {
-  description = "Additional tags to apply to the bucket"
-  type        = map(string)
-  default     = {}
+  default     = "production"
 }
