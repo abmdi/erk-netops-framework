@@ -1,44 +1,44 @@
-hcl
 provider "aws" {
-  region = var.aws_region
+  version = "~> 3.0"
+  region  = var.region
 }
 
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr_block
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name = var.vpc_name
+    Name = "${var.project}-vpc"
   }
 }
 
 resource "aws_subnet" "public" {
+  count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  cidr_block              = element(var.public_subnet_cidrs, count.index)
   map_public_ip_on_launch = true
-  availability_zone       = var.public_subnet_az
 
   tags = {
-    Name = "${var.vpc_name}-public"
+    Name = "${var.project}-public-subnet-${count.index}"
   }
 }
 
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidr
-  availability_zone = var.private_subnet_az
+  count      = length(var.private_subnet_cidrs)
+  vpc_id     = aws_vpc.main.id
+  cidr_block = element(var.private_subnet_cidrs, count.index)
 
   tags = {
-    Name = "${var.vpc_name}-private"
+    Name = "${var.project}-private-subnet-${count.index}"
   }
 }
 
-resource "aws_internet_gateway" "igw" {
+resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.vpc_name}-igw"
+    Name = "${var.project}-igw"
   }
 }
 
@@ -47,51 +47,41 @@ resource "aws_route_table" "public" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+    gateway_id = aws_internet_gateway.main.id
   }
 
   tags = {
-    Name = "${var.vpc_name}-public-rt"
+    Name = "${var.project}-public-rt"
   }
 }
 
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+  count          = length(var.public_subnet_cidrs)
+  subnet_id      = element(aws_subnet.public[*].id, count.index)
   route_table_id = aws_route_table.public.id
 }
 
-# Variables for customization
-variable "aws_region" {
+variable "region" {
   description = "The AWS region to deploy resources in"
   type        = string
 }
 
-variable "vpc_cidr_block" {
+variable "project" {
+  description = "The project name to tag resources"
+  type        = string
+}
+
+variable "vpc_cidr" {
   description = "The CIDR block for the VPC"
   type        = string
 }
 
-variable "vpc_name" {
-  description = "The name of the VPC"
-  type        = string
+variable "public_subnet_cidrs" {
+  description = "A list of CIDR blocks for public subnets"
+  type        = list(string)
 }
 
-variable "public_subnet_cidr" {
-  description = "The CIDR block for the public subnet"
-  type        = string
-}
-
-variable "public_subnet_az" {
-  description = "The availability zone for the public subnet"
-  type        = string
-}
-
-variable "private_subnet_cidr" {
-  description = "The CIDR block for the private subnet"
-  type        = string
-}
-
-variable "private_subnet_az" {
-  description = "The availability zone for the private subnet"
-  type        = string
+variable "private_subnet_cidrs" {
+  description = "A list of CIDR blocks for private subnets"
+  type        = list(string)
 }
