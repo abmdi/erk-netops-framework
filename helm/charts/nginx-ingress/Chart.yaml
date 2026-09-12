@@ -1,0 +1,5 @@
+apiVersion: v2
+name: nginx-ingress
+description: A Helm chart for Kubernetes Nginx Ingress Controller
+version: 1.0.0
+appVersion: "1.0"
