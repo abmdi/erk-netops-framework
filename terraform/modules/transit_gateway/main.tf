@@ -1,23 +1,26 @@
 hcl
-// Define the AWS provider
+// Define a Terraform module to create an AWS Transit Gateway
+
 provider "aws" {
-  region = var.region
+  region = "us-east-1" // Specify the AWS region
 }
 
-// Create a Transit Gateway
-resource "aws_ec2_transit_gateway" "example" {
-  description = "Transit Gateway for connecting VPCs"
+resource "aws_ec2_transit_gateway" "this" {
+  description = "Main Transit Gateway for centralized network management" // Description for the Transit Gateway
+  
+  // Set the default route table association and propagation
+  default_route_table_association = "enable"
+  default_route_table_propagation = "enable"
+
+  // Specify tags for identifying and managing the resource
   tags = {
-    Name = var.transit_gateway_name
+    Name = "Main-Transit-Gateway"
+    Environment = "Production"
   }
 }
 
-// Define outputs for the Transit Gateway ID
+// Output the ID of the created Transit Gateway
 output "transit_gateway_id" {
-  description = "The ID of the Transit Gateway"
-  value       = aws_ec2_transit_gateway.example.id
+  description = "ID of the created Transit Gateway" // Describe the output variable
+  value       = aws_ec2_transit_gateway.this.id
 }
-```
-
-COMMIT_MSG: Add variables and outputs for Transit Gateway module
-FILE_PATH: terraform/modules/transit_gateway/variables.tf
