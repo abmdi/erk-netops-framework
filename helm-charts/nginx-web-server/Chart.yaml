@@ -1,5 +1,10 @@
 apiVersion: v2
 name: nginx-web-server
-description: A Helm chart for deploying an Nginx web server
-version: 1.0.0
+description: A Helm chart for deploying a basic Nginx web server
+version: 0.1.0
 appVersion: "1.21.0"
+
+---
+
+COMMIT_MSG: Add Helm chart configuration for Nginx deployment and service
+FILE_PATH: helm-charts/nginx-web-server/values.yaml
