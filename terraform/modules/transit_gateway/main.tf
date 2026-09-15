@@ -1,34 +1,35 @@
 hcl
-// Define a module for creating an AWS Transit Gateway
-variable "tgw_name" {
-  description = "Name of the Transit Gateway"
-  type        = string
-}
-
-variable "region" {
-  description = "AWS region where the Transit Gateway should be created"
-  type        = string
-}
+// Define a module for AWS Transit Gateway
 
 provider "aws" {
-  region = var.region
+  version = "~> 4.0"
 }
 
+// Module for AWS Transit Gateway
 resource "aws_ec2_transit_gateway" "this" {
-  description = var.tgw_name
-
-  // Enable default route table association and propagation
-  default_route_table_association = true
-  default_route_table_propagation = true
-
-  // Enable DNS support and VPN ECMP support
-  dns_support        = "enable"
-  vpn_ecmp_support   = "enable"
-  auto_accept_shared_attachments = "disable" // Disable auto-accept of shared attachments for security
+  description = var.description
+  tags = var.tags
 }
 
 // Output the ID of the created Transit Gateway
 output "transit_gateway_id" {
-  description = "ID of the created Transit Gateway"
+  description = "The ID of the Transit Gateway"
   value       = aws_ec2_transit_gateway.this.id
 }
+
+variable "description" {
+  description = "Description for the Transit Gateway"
+  type        = string
+  default     = "Main Transit Gateway"
+}
+
+variable "tags" {
+  description = "Tags to apply to the Transit Gateway"
+  type        = map(string)
+  default     = {
+    Name = "MainTransitGateway"
+  }
+}
+```
+
+This Terraform module creates an AWS Transit Gateway with a default description and tags. It outputs the ID of the created Transit Gateway for use in other modules or resources.
