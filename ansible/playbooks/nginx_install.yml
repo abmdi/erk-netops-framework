@@ -1,0 +1,47 @@
+yaml
+---
+- name: Install and configure Nginx on Ubuntu servers
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_version: "1.18.0"  # Specify the desired version of Nginx
+
+  tasks:
+    - name: Update APT package repository cache
+      apt:
+        update_cache: yes
+      tags: update
+
+    - name: Install Nginx
+      apt:
+        name: nginx={{ nginx_version }}
+        state: present
+      tags: install
+
+    - name: Ensure Nginx service is enabled and started
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      tags: service
+
+    - name: Open firewall for Nginx HTTP traffic
+      ufw:
+        rule: allow
+        name: 'Nginx Full'
+      tags: firewall
+
+    - name: Create a simple HTML index file
+      copy:
+        dest: /var/www/html/index.html
+        content: "<html><body><h1>Welcome to Nginx on Ubuntu!</h1></body></html>"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      tags: configuration
+
+    - name: Verify Nginx is running
+      shell: curl -s http://localhost | grep "Welcome to Nginx"
+      register: nginx_test
+      failed_when: nginx_test.rc != 0
+      tags: verify
