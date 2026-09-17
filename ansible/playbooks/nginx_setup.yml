@@ -1,0 +1,72 @@
+---
+- name: Configure Nginx server on Ubuntu
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_package: nginx
+    nginx_service: nginx
+    nginx_conf_path: /etc/nginx/nginx.conf
+
+  tasks:
+    - name: Ensure the latest package lists are available
+      apt:
+        update_cache: yes
+
+    - name: Install Nginx
+      apt:
+        name: "{{ nginx_package }}"
+        state: present
+
+    - name: Start and enable Nginx service
+      service:
+        name: "{{ nginx_service }}"
+        state: started
+        enabled: yes
+
+    - name: Create a custom Nginx configuration file
+      copy:
+        dest: "{{ nginx_conf_path }}"
+        content: |
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
+          include /etc/nginx/modules-enabled/*.conf;
+
+          events {
+              worker_connections 768;
+          }
+
+          http {
+              sendfile on;
+              tcp_nopush on;
+              tcp_nodelay on;
+              keepalive_timeout 65;
+              types_hash_max_size 2048;
+
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+
+              access_log /var/log/nginx/access.log;
+              error_log /var/log/nginx/error.log;
+
+              gzip on;
+
+              include /etc/nginx/conf.d/*.conf;
+              include /etc/nginx/sites-enabled/*;
+          }
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test_result
+      changed_when: false
+
+    - name: Fail if Nginx configuration is invalid
+      fail:
+        msg: "Nginx configuration test failed"
+      when: nginx_test_result.rc != 0
+
+    - name: Reload Nginx to apply changes
+      service:
+        name: "{{ nginx_service }}"
+        state: reloaded
+---
