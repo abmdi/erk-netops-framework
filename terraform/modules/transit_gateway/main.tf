@@ -1,35 +1,22 @@
 hcl
-// Define a module for AWS Transit Gateway
-
-provider "aws" {
-  version = "~> 4.0"
-}
-
-// Module for AWS Transit Gateway
+// Define a module for creating AWS Transit Gateway
 resource "aws_ec2_transit_gateway" "this" {
-  description = var.description
-  tags = var.tags
+  description = var.description // Description for the Transit Gateway
+
+  // Define the default route table association
+  default_route_table_association = var.default_route_table_association
+
+  // Define the default route table propagation
+  default_route_table_propagation = var.default_route_table_propagation
+
+  tags = var.tags // Tags to organize the resource
 }
 
 // Output the ID of the created Transit Gateway
 output "transit_gateway_id" {
-  description = "The ID of the Transit Gateway"
-  value       = aws_ec2_transit_gateway.this.id
-}
-
-variable "description" {
-  description = "Description for the Transit Gateway"
-  type        = string
-  default     = "Main Transit Gateway"
-}
-
-variable "tags" {
-  description = "Tags to apply to the Transit Gateway"
-  type        = map(string)
-  default     = {
-    Name = "MainTransitGateway"
-  }
+  value = aws_ec2_transit_gateway.this.id
 }
 ```
 
-This Terraform module creates an AWS Transit Gateway with a default description and tags. It outputs the ID of the created Transit Gateway for use in other modules or resources.
+COMMIT_MSG: Add variables and outputs for Transit Gateway module
+FILE_PATH: terraform/modules/transit_gateway/variables.tf
