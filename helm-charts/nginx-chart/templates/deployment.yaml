@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: {{ .Values.replicaCount }} # Number of replicas for scaling
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: "nginx:{{ .Values.image.tag }}" # Image tag from values
+          ports:
+            - containerPort: 80 # Expose port 80 for HTTP traffic
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }} # CPU limit from values
+              memory: {{ .Values.resources.limits.memory }} # Memory limit from values
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }} # CPU request from values
+              memory: {{ .Values.resources.requests.memory }} # Memory request from values
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
