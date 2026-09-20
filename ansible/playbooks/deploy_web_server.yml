@@ -1,46 +1,39 @@
-yaml
----
-- name: Deploy and configure web server
+- name: Deploy a web server on Ubuntu
   hosts: web_servers
-  become: yes
+  become: true
   vars:
     http_port: 80
-    document_root: /var/www/html
-
   tasks:
+    # Update package index
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
     # Ensure Apache is installed
     - name: Install Apache
       apt:
         name: apache2
         state: present
-        update_cache: yes
 
-    # Ensure the Apache service is enabled and started
-    - name: Ensure Apache is running
+    # Ensure Apache service is enabled and running
+    - name: Ensure Apache is enabled and running
       service:
         name: apache2
         state: started
-        enabled: yes
+        enabled: true
 
-    # Copy the web content to the document root
-    - name: Deploy web content
-      copy:
-        src: files/index.html
-        dest: "{{ document_root }}/index.html"
-        owner: www-data
-        group: www-data
-        mode: '0644'
-
-    # Configure the firewall to allow HTTP traffic
+    # Configure UFW to allow HTTP traffic
     - name: Allow HTTP traffic through UFW
       ufw:
         rule: allow
         port: "{{ http_port }}"
         proto: tcp
 
-  handlers:
-    # Restart Apache to apply any changes
-    - name: Restart Apache
-      service:
-        name: apache2
-        state: restarted
+    # Ensure the default Apache index page is deployed
+    - name: Deploy default Apache index page
+      copy:
+        content: "<html><body><h1>Welcome to the web server!</h1></body></html>"
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
