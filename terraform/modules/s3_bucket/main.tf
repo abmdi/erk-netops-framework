@@ -1,16 +1,29 @@
+hcl
+// Define a Terraform module to create an S3 bucket with versioning and encryption
+
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+}
+
+variable "region" {
+  description = "The AWS region to deploy the resources"
+  type        = string
+}
+
 provider "aws" {
   region = var.region
 }
 
-resource "aws_s3_bucket" "example" {
+resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 
-  # Enable versioning to preserve, retrieve, and restore versions of objects
+  // Enable versioning on the S3 bucket
   versioning {
     enabled = true
   }
 
-  # Enable server-side encryption by default
+  // Enable default encryption for the S3 bucket
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -19,27 +32,16 @@ resource "aws_s3_bucket" "example" {
     }
   }
 
-  # Enable public access block configuration to prevent public access
-  block_public_access {
-    block_public_acls       = true
-    block_public_policy     = true
-    ignore_public_acls      = true
-    restrict_public_buckets = true
+  // Define a default ACL for the S3 bucket
+  acl = "private"
+
+  tags = {
+    Environment = "Production"
+    ManagedBy   = "Terraform"
   }
 }
 
-# Output bucket ARN for reference
-output "bucket_arn" {
-  value = aws_s3_bucket.example.arn
-}
-
-# Variables required for the module
-variable "region" {
-  description = "The AWS region to create resources in"
-  type        = string
-}
-
-variable "bucket_name" {
-  description = "The name of the S3 bucket to create"
-  type        = string
+output "s3_bucket_id" {
+  description = "The ID of the created S3 bucket"
+  value       = aws_s3_bucket.this.id
 }
