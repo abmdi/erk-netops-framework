@@ -1,53 +1,46 @@
 yaml
 ---
-- name: Setup Nginx Web Server
-  hosts: web_servers
+- name: Configure Nginx on Ubuntu servers
+  hosts: webservers
   become: yes
   vars:
-    nginx_service: nginx
-    nginx_config_path: /etc/nginx/nginx.conf
+    nginx_listen_port: 80
+    nginx_server_name: localhost
 
   tasks:
-    - name: Ensure Nginx is installed
+    # Update and upgrade apt packages
+    - name: Ensure apt packages are up to date
       apt:
-        name: "{{ nginx_service }}"
-        state: present
         update_cache: yes
-      tags: install
+        upgrade: dist
 
-    - name: Start and enable Nginx service
-      systemd:
-        name: "{{ nginx_service }}"
+    # Install Nginx package
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    # Ensure Nginx service is enabled and started
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
         state: started
-        enabled: true
-      tags: service
+        enabled: yes
 
-    - name: Configure Nginx
-      blockinfile:
-        path: "{{ nginx_config_path }}"
-        block: |
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              root /var/www/html;
-              index index.html index.htm;
-              server_name _;
-              location / {
-                  try_files $uri $uri/ =404;
-              }
-          }
-      notify: Restart Nginx
-      tags: config
+    # Configure Nginx to listen on specified port and server name
+    - name: Configure Nginx to listen on specified port
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/default
+      notify: 
+        - Restart Nginx
 
   handlers:
+    # Handler to restart Nginx service upon configuration change
     - name: Restart Nginx
-      systemd:
-        name: "{{ nginx_service }}"
+      service:
+        name: nginx
         state: restarted
+```
 
-  post_tasks:
-    - name: Ensure UFW allows Nginx HTTP traffic
-      ufw:
-        rule: allow
-        name: "Nginx Full"
-      tags: firewall
+Note: Ensure that the `templates/nginx.conf.j2` file exists and is properly configured to use the `nginx_listen_port` and `nginx_server_name` variables.
