@@ -1,46 +1,37 @@
-yaml
 ---
-- name: Deploy Nginx web server
+- name: Deploy Nginx Web Server
   hosts: web_servers
   become: yes
   vars:
     nginx_package: nginx
-    service_name: nginx
+    nginx_service: nginx
 
   tasks:
-    - name: Update and upgrade APT packages
-      apt:
-        update_cache: yes
-        upgrade: dist
-      tags: update
 
-    - name: Install Nginx package
+    - name: Ensure Nginx is installed
       apt:
         name: "{{ nginx_package }}"
         state: present
-      tags: install
+        update_cache: yes
+      tags: nginx
 
     - name: Start and enable Nginx service
       systemd:
-        name: "{{ service_name }}"
+        name: "{{ nginx_service }}"
         state: started
-        enabled: yes
-      tags: service
+        enabled: true
+      tags: nginx
 
-    - name: Ensure UFW allows HTTP traffic
-      ufw:
-        rule: allow
-        name: "WWW"
-        port: "80"
-        proto: "tcp"
-      tags: firewall
+    - name: Ensure Nginx is listening on port 80
+      lineinfile:
+        path: /etc/nginx/sites-available/default
+        regexp: "listen 80 default_server;"
+        line: "listen 80 default_server;"
+      notify: Restart nginx
+      tags: nginx
 
-    - name: Verify Nginx is running
-      command: systemctl status nginx
-      register: nginx_status
-      changed_when: false
-
-    - name: Print Nginx status
-      debug:
-        msg: "Nginx is {{ 'running' if 'running' in nginx_status.stdout else 'not running' }}"
-
+  handlers:
+    - name: Restart nginx
+      systemd:
+        name: "{{ nginx_service }}"
+        state: restarted
