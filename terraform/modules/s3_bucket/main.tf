@@ -1,5 +1,5 @@
 hcl
-// Define a Terraform module to create an S3 bucket with versioning and encryption
+// Define a module to create an AWS S3 bucket with versioning enabled
 
 variable "bucket_name" {
   description = "The name of the S3 bucket"
@@ -7,8 +7,9 @@ variable "bucket_name" {
 }
 
 variable "region" {
-  description = "The AWS region to deploy the resources"
+  description = "The AWS region where the S3 bucket will be created"
   type        = string
+  default     = "us-west-2" // Default region set to us-west-2
 }
 
 provider "aws" {
@@ -18,30 +19,32 @@ provider "aws" {
 resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 
-  // Enable versioning on the S3 bucket
+  // Enable versioning to keep multiple versions of objects in the bucket
   versioning {
     enabled = true
   }
 
-  // Enable default encryption for the S3 bucket
+  // Enable server-side encryption by default
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
+        sse_algorithm = "AES256" // Use AES-256 encryption
       }
     }
   }
 
-  // Define a default ACL for the S3 bucket
-  acl = "private"
+  // Define a lifecycle rule to automatically delete incomplete multipart uploads after 7 days
+  lifecycle_rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 
   tags = {
-    Environment = "Production"
-    ManagedBy   = "Terraform"
+    Name        = var.bucket_name
+    Environment = "production"
   }
-}
-
-output "s3_bucket_id" {
-  description = "The ID of the created S3 bucket"
-  value       = aws_s3_bucket.this.id
 }
