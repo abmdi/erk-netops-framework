@@ -5,4 +5,4 @@ type: application
 version: 1.0.0
 appVersion: "1.21.0"
 ---END CODE---
-
+FILE_PATH: helm/nginx-webserver/values.yaml
