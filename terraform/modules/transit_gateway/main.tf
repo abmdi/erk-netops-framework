@@ -1,61 +1,47 @@
 provider "aws" {
-  region = var.aws_region
+  region = var.region
 }
 
-resource "aws_ec2_transit_gateway" "example" {
-  description = "Example Transit Gateway"
+resource "aws_ec2_transit_gateway" "this" {
+  description = var.description
   amazon_side_asn = var.amazon_side_asn
 
+  # Enable default route table association
+  default_route_table_association = var.default_route_table_association
+
+  # Enable default route table propagation
+  default_route_table_propagation = var.default_route_table_propagation
+
   tags = {
-    Name = "Example-Transit-Gateway"
+    Name = var.name
   }
 }
 
-resource "aws_ec2_transit_gateway_route_table" "example" {
-  transit_gateway_id = aws_ec2_transit_gateway.example.id
+resource "aws_ec2_transit_gateway_route_table" "this" {
+  transit_gateway_id = aws_ec2_transit_gateway.this.id
 
   tags = {
-    Name = "Example-TGW-Route-Table"
+    Name = "${var.name}-rt"
   }
 }
 
-resource "aws_ec2_transit_gateway_vpc_attachment" "example" {
+resource "aws_ec2_transit_gateway_vpc_attachment" "this" {
   subnet_ids         = var.subnet_ids
-  transit_gateway_id = aws_ec2_transit_gateway.example.id
+  transit_gateway_id = aws_ec2_transit_gateway.this.id
   vpc_id             = var.vpc_id
 
   tags = {
-    Name = "Example-TGW-VPC-Attachment"
+    Name = "${var.name}-vpc-attachment"
   }
 }
 
-resource "aws_ec2_transit_gateway_route" "example" {
-  destination_cidr_block         = var.destination_cidr_block
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.example.id
-  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.example.id
+# Outputs for terraform module
+output "transit_gateway_id" {
+  description = "The ID of the Transit Gateway."
+  value       = aws_ec2_transit_gateway.this.id
 }
 
-variable "aws_region" {
-  description = "The AWS region where resources will be created"
-  type        = string
-}
-
-variable "amazon_side_asn" {
-  description = "The ASN for the Amazon side of the transit gateway"
-  type        = number
-}
-
-variable "subnet_ids" {
-  description = "A list of subnet IDs to attach to the transit gateway"
-  type        = list(string)
-}
-
-variable "vpc_id" {
-  description = "The ID of the VPC to attach to the transit gateway"
-  type        = string
-}
-
-variable "destination_cidr_block" {
-  description = "The CIDR block for the destination route"
-  type        = string
+output "transit_gateway_route_table_id" {
+  description = "The ID of the Transit Gateway Route Table."
+  value       = aws_ec2_transit_gateway_route_table.this.id
 }
