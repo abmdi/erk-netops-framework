@@ -1,18 +1,22 @@
-hcl
 provider "aws" {
   region = var.region
 }
 
-resource "aws_s3_bucket" "this" {
+resource "aws_s3_bucket" "my_bucket" {
   bucket = var.bucket_name
-  acl    = var.acl
-
-  # Enable versioning for the S3 bucket
+  
+  # Enable versioning for the bucket
   versioning {
     enabled = true
   }
-
-  # Enable server-side encryption by default
+  
+  # Enable server access logging
+  logging {
+    target_bucket = var.logging_target_bucket
+    target_prefix = "log/"
+  }
+  
+  # Enforce encryption of data at rest
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -20,17 +24,35 @@ resource "aws_s3_bucket" "this" {
       }
     }
   }
-
-  tags = var.tags
+  
+  tags = {
+    Name        = var.bucket_name
+    Environment = var.environment
+  }
 }
 
-# Outputs for the bucket name and ARN
+# Output the bucket name
 output "bucket_name" {
-  description = "The name of the S3 bucket"
-  value       = aws_s3_bucket.this.id
+  value = aws_s3_bucket.my_bucket.bucket
 }
 
-output "bucket_arn" {
-  description = "The ARN of the S3 bucket"
-  value       = aws_s3_bucket.this.arn
+# Variables for the module
+variable "region" {
+  description = "The AWS region to create the bucket in"
+  type        = string
+}
+
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+}
+
+variable "logging_target_bucket" {
+  description = "The target bucket for server access logs"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, prod)"
+  type        = string
 }
