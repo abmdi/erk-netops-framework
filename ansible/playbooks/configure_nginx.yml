@@ -1,41 +1,47 @@
 ---
-- name: Configure Nginx on Ubuntu Servers
+- name: Configure Nginx on Ubuntu
   hosts: webservers
   become: yes
   vars:
-    nginx_conf_path: /etc/nginx/sites-available/default
+    nginx_package: nginx
+    default_index_file: /var/www/html/index.nginx-debian.html
 
   tasks:
+
     - name: Update and upgrade apt packages
       apt:
         update_cache: yes
         upgrade: dist
-      tags: update
+      tags: ['setup']
 
     - name: Install Nginx
       apt:
-        name: nginx
+        name: "{{ nginx_package }}"
         state: present
-      tags: install
+      tags: ['nginx']
 
-    - name: Ensure Nginx is started and enabled
+    - name: Ensure Nginx service is running
       service:
-        name: nginx
+        name: "{{ nginx_package }}"
         state: started
         enabled: yes
-      tags: service
+      tags: ['nginx']
 
-    - name: Deploy custom Nginx configuration
-      template:
-        src: templates/nginx.conf.j2
-        dest: "{{ nginx_conf_path }}"
-      notify:
-        - Reload Nginx
-      tags: config
+    - name: Create custom index.html
+      copy:
+        dest: "{{ default_index_file }}"
+        content: |
+          <html>
+          <head><title>Welcome to Nginx!</title></head>
+          <body>
+          <h1>Success! The Nginx server is working!</h1>
+          </body>
+          </html>
+      tags: ['nginx']
 
-  handlers:
-    - name: Reload Nginx
-      service:
-        name: nginx
-        state: reloaded
+    - name: Allow HTTP traffic through UFW
+      ufw:
+        rule: allow
+        name: 'Nginx Full'
+      tags: ['firewall']
 ---
