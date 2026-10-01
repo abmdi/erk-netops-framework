@@ -1,45 +1,72 @@
+yaml
 ---
-- name: Configure Nginx on Ubuntu
-  hosts: webservers
+- name: Setup Nginx Web Server
+  hosts: web_servers
   become: yes
   vars:
-    nginx_conf_path: /etc/nginx/sites-available/default
+    nginx_package: nginx
+    web_root: /var/www/html
+    index_file: index.html
 
   tasks:
-  
-    - name: Ensure Nginx is installed
+    # Update the package manager cache
+    - name: Update apt cache
       apt:
-        name: nginx
-        state: present
         update_cache: yes
+      when: ansible_os_family == "Debian"
 
+    # Ensure Nginx is installed
+    - name: Install Nginx
+      apt:
+        name: "{{ nginx_package }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Nginx
+      yum:
+        name: "{{ nginx_package }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    # Start and enable Nginx service
     - name: Ensure Nginx is running and enabled
       service:
-        name: nginx
+        name: "{{ nginx_package }}"
         state: started
         enabled: yes
 
-    - name: Configure Nginx with custom settings
-      blockinfile:
-        path: "{{ nginx_conf_path }}"
-        block: |
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
+    # Deploy a simple index.html to the web root
+    - name: Create index.html
+      copy:
+        dest: "{{ web_root }}/{{ index_file }}"
+        content: |
+          <html>
+          <head>
+              <title>Welcome to Nginx!</title>
+          </head>
+          <body>
+              <h1>Hello from Nginx on {{ ansible_hostname }}!</h1>
+          </body>
+          </html>
 
-              root /var/www/html;
-              index index.html index.htm index.nginx-debian.html;
+    # Open HTTP port in firewall if present
+    - name: Open HTTP port in firewall (Debian)
+      ufw:
+        rule: allow
+        name: "Nginx HTTP"
+      when: ansible_os_family == "Debian"
 
-              server_name _;
-
-              location / {
-                  try_files $uri $uri/ =404;
-              }
-          }
-      notify: Restart Nginx
+    - name: Open HTTP port in firewall (RedHat)
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+      when: ansible_os_family == "RedHat"
+      notify:
+        - reload firewalld
 
   handlers:
-    - name: Restart Nginx
+    - name: reload firewalld
       service:
-        name: nginx
-        state: restarted
+        name: firewalld
+        state: reloaded
