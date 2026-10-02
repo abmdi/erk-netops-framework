@@ -1,16 +1,14 @@
+hcl
+// Define the AWS provider to use
 provider "aws" {
   region = var.region
 }
 
-resource "aws_s3_bucket" "my_bucket" {
+// Create an S3 bucket with server-side encryption enabled
+resource "aws_s3_bucket" "secure_bucket" {
   bucket = var.bucket_name
 
-  # Enable versioning for the bucket
-  versioning {
-    enabled = true
-  }
-
-  # Enable server-side encryption by default
+  // Enable server-side encryption by default
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -19,34 +17,42 @@ resource "aws_s3_bucket" "my_bucket" {
     }
   }
 
-  # Block public access to the bucket
-  block_public_access {
-    block_public_acls       = true
-    block_public_policy     = true
-    ignore_public_acls      = true
-    restrict_public_buckets = true
+  // Enable versioning to keep track of object versions
+  versioning {
+    enabled = true
   }
 
-  # Tags for better resource management
-  tags = {
-    Name        = var.bucket_name
-    Environment = var.environment
+  // Enable access logging for the bucket
+  logging {
+    target_bucket = var.logging_bucket
+    target_prefix = "${var.bucket_name}/logs/"
+  }
+
+  // Enable lifecycle policies to transition and expire objects
+  lifecycle_rule {
+    id      = "transition_and_expiration"
+    enabled = true
+
+    // Transition objects to STANDARD_IA after 30 days
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    // Expire objects after 365 days
+    expiration {
+      days = 365
+    }
   }
 }
 
-variable "region" {
-  description = "The AWS region to create resources in."
-  type        = string
-  default     = "us-east-1"
+// Outputs
+output "bucket_name" {
+  description = "The name of the S3 bucket"
+  value       = aws_s3_bucket.secure_bucket.id
 }
 
-variable "bucket_name" {
-  description = "The name of the S3 bucket."
-  type        = string
-}
-
-variable "environment" {
-  description = "The environment where the resources are deployed."
-  type        = string
-  default     = "dev"
+output "bucket_arn" {
+  description = "The ARN of the S3 bucket"
+  value       = aws_s3_bucket.secure_bucket.arn
 }
