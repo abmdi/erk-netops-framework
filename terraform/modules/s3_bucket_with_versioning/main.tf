@@ -1,49 +1,42 @@
+hcl
+// Define the AWS provider
 provider "aws" {
-  # AWS region where resources will be created
   region = var.region
 }
 
+// Create an S3 bucket with versioning enabled
 resource "aws_s3_bucket" "my_bucket" {
-  # Unique bucket name
   bucket = var.bucket_name
 
-  # Enable versioning for the bucket
+  // Enable versioning for the bucket
   versioning {
     enabled = true
   }
 
-  # Configure bucket ACL
-  acl = "private"
-
+  // Define tags for the S3 bucket
   tags = {
-    # Tagging for identification and cost tracking
+    Name        = var.bucket_name
     Environment = var.environment
-    Project     = var.project
   }
 }
 
-# Output the bucket ARN for reference
-output "bucket_arn" {
-  value = aws_s3_bucket.my_bucket.arn
-}
-
-# Define input variables
+// Define input variables
 variable "region" {
-  description = "The AWS region where the bucket will be created"
+  description = "The AWS region to deploy the resources."
   type        = string
 }
 
 variable "bucket_name" {
-  description = "The name of the S3 bucket"
+  description = "The name of the S3 bucket."
   type        = string
 }
 
 variable "environment" {
-  description = "The environment for the resources (e.g., dev, prod)"
+  description = "The environment name (e.g., dev, prod)."
   type        = string
 }
 
-variable "project" {
-  description = "The project name for tagging"
-  type        = string
+output "bucket_name" {
+  description = "The name of the created S3 bucket."
+  value       = aws_s3_bucket.my_bucket.bucket
 }
