@@ -1,48 +1,59 @@
-- name: Configure Apache Web Server
+yaml
+---
+- name: Setup Apache Web Server
   hosts: webservers
   become: yes
   vars:
     apache_packages:
-      - apache2
-    service_name: apache2
+      - httpd
+    apache_service: httpd
+    document_root: /var/www/html
 
   tasks:
-    - name: Ensure Apache is installed
-      apt:
+    - name: Install Apache packages
+      yum:
         name: "{{ apache_packages }}"
         state: present
-        update_cache: yes
-
-    - name: Ensure Apache service is enabled and running
-      service:
-        name: "{{ service_name }}"
+      tags: apache
+    
+    - name: Start and enable Apache service
+      systemd:
+        name: "{{ apache_service }}"
         state: started
         enabled: yes
+      tags: apache
 
-    - name: Deploy custom index.html
+    - name: Ensure document root directory exists
+      file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: apache
+        group: apache
+        mode: '0755'
+      tags: apache
+
+    - name: Deploy a basic index.html
       copy:
-        dest: /var/www/html/index.html
+        dest: "{{ document_root }}/index.html"
         content: |
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Welcome to Apache!</title>
+              <title>Welcome to Apache!</title>
           </head>
           <body>
-            <h1>Success! Apache is configured correctly.</h1>
+              <h1>Success! The Apache server is configured.</h1>
           </body>
           </html>
+        owner: apache
+        group: apache
+        mode: '0644'
+      tags: apache
 
-    - name: Ensure UFW is installed
-      apt:
-        name: ufw
-        state: present
-
-    - name: Allow 'Apache Full' profile through UFW
-      ufw:
-        rule: allow
-        name: 'Apache Full'
-
-    - name: Enable UFW
-      ufw:
+    - name: Open HTTP service in the firewall
+      firewalld:
+        service: http
+        permanent: yes
         state: enabled
+        immediate: yes
+      tags: apache
