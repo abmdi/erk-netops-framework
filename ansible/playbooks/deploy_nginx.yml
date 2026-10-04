@@ -1,37 +1,42 @@
+yaml
 ---
-- name: Deploy Nginx Web Server
+- name: Deploy Nginx on Ubuntu Servers
   hosts: web_servers
   become: yes
   vars:
-    nginx_package: nginx
-    nginx_service: nginx
+    nginx_pkg_name: nginx
+    nginx_service_name: nginx
 
   tasks:
-
-    - name: Ensure Nginx is installed
+    - name: Update and upgrade apt packages
       apt:
-        name: "{{ nginx_package }}"
-        state: present
         update_cache: yes
-      tags: nginx
+        upgrade: dist
+      tags: [update]
+
+    - name: Install Nginx
+      apt:
+        name: "{{ nginx_pkg_name }}"
+        state: present
+      tags: [install]
 
     - name: Start and enable Nginx service
       systemd:
-        name: "{{ nginx_service }}"
+        name: "{{ nginx_service_name }}"
         state: started
-        enabled: true
-      tags: nginx
+        enabled: yes
+      tags: [service]
 
     - name: Ensure Nginx is listening on port 80
       lineinfile:
         path: /etc/nginx/sites-available/default
-        regexp: "listen 80 default_server;"
-        line: "listen 80 default_server;"
-      notify: Restart nginx
-      tags: nginx
+        regexp: 'listen 80;'
+        line: 'listen 80 default_server;'
+      notify: Restart Nginx
+      tags: [configuration]
 
   handlers:
-    - name: Restart nginx
+    - name: Restart Nginx
       systemd:
-        name: "{{ nginx_service }}"
+        name: "{{ nginx_service_name }}"
         state: restarted
