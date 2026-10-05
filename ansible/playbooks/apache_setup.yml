@@ -5,55 +5,36 @@ yaml
   become: yes
   vars:
     apache_packages:
-      - httpd
-    apache_service: httpd
-    document_root: /var/www/html
+      - apache2
 
   tasks:
-    - name: Install Apache packages
-      yum:
+    - name: Ensure Apache is installed
+      apt:
         name: "{{ apache_packages }}"
         state: present
-      tags: apache
-    
-    - name: Start and enable Apache service
-      systemd:
-        name: "{{ apache_service }}"
+        update_cache: yes
+      tags: install
+
+    - name: Ensure Apache is started and enabled
+      service:
+        name: apache2
         state: started
         enabled: yes
-      tags: apache
+      tags:
+        - start
+        - enable
 
-    - name: Ensure document root directory exists
-      file:
-        path: "{{ document_root }}"
-        state: directory
-        owner: apache
-        group: apache
-        mode: '0755'
-      tags: apache
-
-    - name: Deploy a basic index.html
+    - name: Deploy custom index.html
       copy:
-        dest: "{{ document_root }}/index.html"
-        content: |
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Welcome to Apache!</title>
-          </head>
-          <body>
-              <h1>Success! The Apache server is configured.</h1>
-          </body>
-          </html>
-        owner: apache
-        group: apache
+        src: files/index.html
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
         mode: '0644'
-      tags: apache
+      tags: deploy
 
-    - name: Open HTTP service in the firewall
-      firewalld:
-        service: http
-        permanent: yes
-        state: enabled
-        immediate: yes
-      tags: apache
+    - name: Open HTTP port in the firewall
+      ufw:
+        rule: allow
+        name: 'Apache Full'
+      tags: firewall
