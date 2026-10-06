@@ -1,0 +1,44 @@
+---
+- name: Setup Nginx Web Server
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_package: nginx
+    nginx_service: nginx
+    nginx_config_path: /etc/nginx/nginx.conf
+
+  tasks:
+    - name: Ensure Nginx is installed
+      yum:
+        name: "{{ nginx_package }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure Nginx is installed
+      apt:
+        name: "{{ nginx_package }}"
+        state: present
+      update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure Nginx service is started and enabled
+      service:
+        name: "{{ nginx_service }}"
+        state: started
+        enabled: yes
+
+    - name: Deploy custom Nginx configuration
+      template:
+        src: templates/nginx.conf.j2
+        dest: "{{ nginx_config_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: "{{ nginx_service }}"
+        state: reloaded
