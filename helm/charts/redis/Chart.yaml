@@ -1,5 +1,9 @@
 apiVersion: v2
 name: redis
-description: A Helm chart for Redis
-version: 0.1.0
-appVersion: "6.2.5"
+description: A Helm chart for deploying a Redis cluster
+version: 1.0.0
+appVersion: "6.2.4"
+
+---
+
+FILE_PATH: helm/charts/redis/values.yaml
