@@ -1,56 +1,77 @@
 ---
-- name: Deploy Web Server
-  hosts: webservers
+- name: Deploy Secure Web Server
+  hosts: web_servers
   become: yes
   vars:
-    # Define variables for the web server
-    web_user: www-data
-    web_group: www-data
-    web_root: /var/www/html
-    package_list:
-      - apache2
-      - php
-      - libapache2-mod-php
+    http_port: 80
+    https_port: 443
+    server_admin: admin@example.com
+    document_root: /var/www/html
 
   tasks:
-    - name: Ensure the Apache web server is installed
+    # Ensure Apache is installed
+    - name: Install Apache
       apt:
-        name: "{{ package_list }}"
+        name: apache2
         state: present
         update_cache: yes
 
-    - name: Start and enable the Apache service
+    # Ensure the firewall allows traffic on HTTP and HTTPS
+    - name: Ensure UFW allows HTTP and HTTPS
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+    with_items:
+      - "{{ http_port }}"
+      - "{{ https_port }}"
+
+    # Set up the document root
+    - name: Ensure document root directory exists
+      file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    # Deploy a basic HTML page
+    - name: Deploy index.html
+      copy:
+        content: "<html><h1>Welcome to the Secure Web Server</h1></html>"
+        dest: "{{ document_root }}/index.html"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    # Enable and start Apache service
+    - name: Ensure Apache is enabled and running
       service:
         name: apache2
         state: started
-        enabled: yes
+        enabled: true
 
-    - name: Create web root directory
-      file:
-        path: "{{ web_root }}"
-        state: directory
-        owner: "{{ web_user }}"
-        group: "{{ web_group }}"
-        mode: '0755'
+    # Install SSL module and generate a self-signed certificate
+    - name: Install SSL Module
+      apt:
+        name: ssl-cert
+        state: present
 
-    - name: Deploy a sample index.php file
-      copy:
-        dest: "{{ web_root }}/index.php"
-        content: |
-          <?php
-          echo "Hello, World!";
-          ?>
-        owner: "{{ web_user }}"
-        group: "{{ web_group }}"
-        mode: '0644'
+    - name: Enable SSL Module in Apache
+      command: a2enmod ssl
 
-    - name: Open HTTP port in the firewall
-      ufw:
-        rule: allow
-        port: '80'
-        proto: tcp
+    - name: Generate self-signed SSL certificate
+      openssl_certificate:
+        path: /etc/ssl/certs/ssl-cert-snakeoil.pem
+        privatekey_path: /etc/ssl/private/ssl-cert-snakeoil.key
+        common_name: "{{ ansible_fqdn }}"
+        state: present
 
-    - name: Ensure UFW is enabled
-      ufw:
-        state: enabled
-...
+    - name: Ensure Apache SSL configuration is enabled
+      command: a2ensite default-ssl
+      notify: restart apache
+
+  handlers:
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted
