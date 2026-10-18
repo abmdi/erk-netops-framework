@@ -1,100 +1,75 @@
 hcl
-// Define the AWS provider to interact with AWS resources
 provider "aws" {
-  region = var.aws_region
+  region = var.region
 }
 
-// Module to create AWS Transit Gateway
-module "transit_gateway" {
-  source  = "terraform-aws-modules/transit-gateway/aws"
-  version = "~> 2.0"
-
-  // Set the name and description for the Transit Gateway
-  name        = var.transit_gateway_name
-  description = var.transit_gateway_description
-
-  // Define Transit Gateway options
+resource "aws_ec2_transit_gateway" "tgw" {
+  description = "Main Transit Gateway for inter-VPC communication"
   amazon_side_asn = var.amazon_side_asn
 
-  // Tags to organize resources
   tags = {
-    Name        = var.transit_gateway_name
-    Environment = var.environment
+    Name = "Main-Transit-Gateway"
   }
 }
 
-// Outputs for the Transit Gateway ID
-output "transit_gateway_id" {
-  description = "ID of the created AWS Transit Gateway"
-  value       = module.transit_gateway.this_ec2_transit_gateway_id
-}
-```
+resource "aws_ec2_transit_gateway_route_table" "tgw_route_table" {
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
 
-// Variables file: variables.tf
-```hcl
-// Define the required variables with appropriate types and descriptions
-
-variable "aws_region" {
-  description = "The AWS region where the resources will be created."
-  type        = string
+  tags = {
+    Name = "Main-TGW-Route-Table"
+  }
 }
 
-variable "transit_gateway_name" {
-  description = "The name of the Transit Gateway."
-  type        = string
+resource "aws_ec2_transit_gateway_vpc_attachment" "vpc_attachment" {
+  count = length(var.vpc_ids)
+
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+  vpc_id             = element(var.vpc_ids, count.index)
+  subnet_ids         = element(var.subnet_ids, count.index)
+
+  tags = {
+    Name = "VPC-Attachment-${count.index}"
+  }
 }
 
-variable "transit_gateway_description" {
-  description = "A description for the Transit Gateway."
+resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_association" {
+  count = length(var.vpc_ids)
+
+  transit_gateway_attachment_id = element(aws_ec2_transit_gateway_vpc_attachment.vpc_attachment[*].id, count.index)
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table.id
+}
+
+resource "aws_ec2_transit_gateway_route" "tgw_route" {
+  count = length(var.destination_cidrs)
+
+  destination_cidr_block         = element(var.destination_cidrs, count.index)
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table.id
+  transit_gateway_attachment_id  = element(aws_ec2_transit_gateway_vpc_attachment.vpc_attachment[*].id, count.index)
+}
+
+variable "region" {
+  description = "The AWS region to deploy the resources"
   type        = string
+  default     = "us-west-2"
 }
 
 variable "amazon_side_asn" {
-  description = "The Autonomous System Number (ASN) for the Amazon side of the Gateway."
+  description = "The ASN for the Amazon side of the gateway"
   type        = number
   default     = 64512
 }
 
-variable "environment" {
-  description = "The environment tag for the resources, e.g., dev, prod."
-  type        = string
+variable "vpc_ids" {
+  description = "List of VPC IDs to attach to the Transit Gateway"
+  type        = list(string)
 }
-```
 
-// CI/CD Pipeline configuration file: .github/workflows/main.yml
-```yaml
-name: Terraform
+variable "subnet_ids" {
+  description = "List of subnet IDs within the VPCs for Transit Gateway attachment"
+  type        = list(list(string))
+}
 
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  terraform:
-    name: 'Terraform'
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
-      with:
-        terraform_version: 1.0.0
-
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Plan
-      run: terraform plan
-
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
-
-This module is designed to set up an AWS Transit Gateway using Terraform and integrate it into a CI/CD pipeline with GitHub Actions, ensuring automated deployment on code push to the main branch.
+variable "destination_cidrs" {
+  description = "List of CIDR blocks for routing through the Transit Gateway"
+  type        = list(string)
+}
