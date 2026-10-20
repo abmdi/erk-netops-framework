@@ -1,32 +1,35 @@
 hcl
-// Define the Terraform AWS provider
-provider "aws" {
-  version = "~> 3.0"
-  region  = var.region
-}
+// Define a module for AWS Transit Gateway
+module "transit_gateway" {
+  source = "terraform-aws-modules/transit-gateway/aws"
 
-// Module to create an AWS Transit Gateway
-resource "aws_ec2_transit_gateway" "example" {
-  description = "Example Transit Gateway"
-  # Setting the default route table association to automatic
-  default_route_table_association = "enable"
-  # Setting the default route table propagation to automatic
-  default_route_table_propagation = "enable"
-  # Enable DNS support between VPCs
-  dns_support = "enable"
-  # Enable VPN ECMP support
-  vpn_ecmp_support = "enable"
-  // Enable multicast support
-  multicast_support = "enable"
+  // Define the name of the Transit Gateway
+  name = "erk-netops-transit-gateway"
 
-  // Tags to help identify this resource
+  // Define the Amazon Resource Name (ARN) of the Transit Gateway
+  arn = "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:transit-gateway/${aws_ec2_transit_gateway.this.id}"
+
+  // Define the description of the Transit Gateway
+  description = "Transit Gateway for ERK Network Operations"
+
+  // Define the Amazon Resource Name (ARN) of the default route table
+  default_route_table_association = true
+
+  // Enable default route table propagation
+  default_route_table_propagation = true
+
+  // Define whether the Transit Gateway is shared with other accounts
+  share_with_other_accounts = false
+
+  // Define the tags for the Transit Gateway
   tags = {
-    Name = var.transit_gateway_name
+    Environment = var.environment
+    Project     = "erk-netops"
   }
 }
 
 // Output the Transit Gateway ID
 output "transit_gateway_id" {
-  description = "The ID of the Transit Gateway"
-  value       = aws_ec2_transit_gateway.example.id
+  description = "ID of the Transit Gateway"
+  value       = aws_ec2_transit_gateway.this.id
 }
