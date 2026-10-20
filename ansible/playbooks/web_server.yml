@@ -1,0 +1,57 @@
+---
+- name: Configure Web Server
+  hosts: web_servers
+  become: yes
+  vars:
+    http_port: 80
+    max_clients: 200
+
+  tasks:
+
+    - name: Ensure Apache is installed
+      ansible.builtin.yum:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache service
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Ensure the firewall allows HTTP traffic
+      ansible.builtin.firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Deploy index.html to web server
+      ansible.builtin.copy:
+        src: files/index.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure Apache to use specified port
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen '
+        line: "Listen {{ http_port }}"
+        notify:
+          - Restart Apache
+
+    - name: Set Max Clients in Apache configuration
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^MaxClients '
+        line: "MaxClients {{ max_clients }}"
+        notify:
+          - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
