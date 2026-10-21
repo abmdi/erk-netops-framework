@@ -1,6 +1,9 @@
 apiVersion: v2
 name: nginx-deployment
-description: A Helm chart to deploy NGINX with custom configurations
-type: application
+description: A Helm chart for deploying Nginx with ingress support
 version: 1.0.0
-appVersion: "1.21.0"
+appVersion: "1.21.1"
+
+---
+
+FILE_PATH: helm/nginx-deployment/values.yaml
