@@ -1,0 +1,36 @@
+---
+- name: Deploy and configure Nginx web server
+  hosts: webservers
+  become: yes
+  vars:
+    nginx_port: 80
+
+  tasks:
+    - name: Ensure Nginx is installed
+      ansible.builtin.yum:
+        name: nginx
+        state: present
+      tags: nginx
+
+    - name: Ensure Nginx service is running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+      tags: nginx
+
+    - name: Configure Nginx to use custom port
+      ansible.builtin.lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: '^(\s*listen\s+)([0-9]+);'
+        line: '\1{{ nginx_port }};'
+        backup: yes
+      notify: Restart Nginx
+      tags: nginx
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+      tags: nginx
