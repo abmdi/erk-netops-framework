@@ -1,47 +1,53 @@
-yaml
 ---
-- name: Install and configure Nginx on Ubuntu servers
+- name: Install and configure Nginx on Ubuntu
   hosts: web_servers
-  become: yes
+  become: yes  # Gain root privileges to perform installation
+
   vars:
-    nginx_version: "1.18.0"  # Specify the desired version of Nginx
+    nginx_conf_path: /etc/nginx/nginx.conf  # Path to the main Nginx configuration file
+    server_name: example.com  # Domain name for the Nginx server
 
   tasks:
-    - name: Update APT package repository cache
+    - name: Ensure Nginx is installed
       apt:
-        update_cache: yes
-      tags: update
-
-    - name: Install Nginx
-      apt:
-        name: nginx={{ nginx_version }}
-        state: present
-      tags: install
-
-    - name: Ensure Nginx service is enabled and started
-      service:
         name: nginx
-        state: started
+        state: present
+        update_cache: yes  # Update the package cache before installing
+
+    - name: Ensure Nginx service is enabled and running
+      systemd:
+        name: nginx
         enabled: yes
-      tags: service
+        state: started
 
-    - name: Open firewall for Nginx HTTP traffic
-      ufw:
-        rule: allow
-        name: 'Nginx Full'
-      tags: firewall
-
-    - name: Create a simple HTML index file
+    - name: Configure Nginx
       copy:
-        dest: /var/www/html/index.html
-        content: "<html><body><h1>Welcome to Nginx on Ubuntu!</h1></body></html>"
-        owner: www-data
-        group: www-data
-        mode: '0644'
-      tags: configuration
+        content: |
+          server {
+              listen 80;
+              server_name {{ server_name }};
 
-    - name: Verify Nginx is running
-      shell: curl -s http://localhost | grep "Welcome to Nginx"
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Test Nginx configuration
+      command: nginx -t
       register: nginx_test
-      failed_when: nginx_test.rc != 0
-      tags: verify
+      ignore_errors: yes  # Continue playbook execution even if there are errors
+
+    - name: Fail if Nginx configuration is invalid
+      fail:
+        msg: "Nginx configuration test failed"
+      when: nginx_test.rc != 0
+
+    - name: Reload Nginx to apply changes
+      systemd:
+        name: nginx
+        state: reloaded
+        when: nginx_test.rc == 0  # Only reload if configuration test passed
