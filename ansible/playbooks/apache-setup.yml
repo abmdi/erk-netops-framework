@@ -1,0 +1,45 @@
+---
+- name: Configure Apache Web Server
+  hosts: webservers
+  become: yes
+  vars:
+    apache_packages:
+      - httpd
+    service_name: httpd
+    document_root: /var/www/html
+
+  tasks:
+    - name: Install Apache packages
+      yum:
+        name: "{{ apache_packages }}"
+        state: present
+      tags: apache
+
+    - name: Ensure Apache service is enabled and started
+      service:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+      tags: apache
+
+    - name: Deploy a custom index.html
+      copy:
+        dest: "{{ document_root }}/index.html"
+        content: "<html><body><h1>Welcome to Apache Server!</h1></body></html>"
+      tags: apache
+
+    - name: Open HTTP port in firewall
+      firewalld:
+        port: 80/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+      notify: Restart Apache
+      tags: firewall
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: "{{ service_name }}"
+        state: restarted
+      tags: apache
