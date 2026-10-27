@@ -1,6 +1,5 @@
 apiVersion: v2
 name: nginx-web-server
-description: A Helm chart for deploying a simple Nginx web server
-type: application
+description: A Helm chart for deploying a basic Nginx web server on Kubernetes
 version: 0.1.0
-appVersion: "1.21.0"
+appVersion: 1.17.1
