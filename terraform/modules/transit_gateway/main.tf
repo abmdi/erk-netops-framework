@@ -1,36 +1,40 @@
 hcl
-# Define a Terraform module to create an AWS Transit Gateway
+// Define a Terraform module to create an AWS Transit Gateway
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
 
-# Specify the required provider
+  required_version = ">= 1.0"
+}
+
 provider "aws" {
-  version = "~> 4.0"
-  region  = var.region  # Use the region specified in variables
+  region = var.region
 }
 
-# Define the Transit Gateway resource
-resource "aws_ec2_transit_gateway" "tgw" {
-  # Name of the Transit Gateway for easy identification
-  description = var.description
+// Resource block to create a Transit Gateway
+resource "aws_ec2_transit_gateway" "this" {
+  // Description of the Transit Gateway
+  description = var.tgw_description
 
-  # Options for the Transit Gateway
-  options {
-    amazon_side_asn = var.amazon_side_asn  # ASN for the Amazon side
-  }
+  // Amazon-side ASN
+  amazon_side_asn = var.amazon_side_asn
 
-  # Tags to identify the resource
+  // Tags for the Transit Gateway
   tags = {
-    Name        = var.name
-    Environment = var.environment
+    Name = var.tgw_name
   }
 }
 
-# Outputs to be used by other modules or resources
+// Output block to export Transit Gateway details
 output "transit_gateway_id" {
-  value       = aws_ec2_transit_gateway.tgw.id
   description = "The ID of the Transit Gateway"
+  value       = aws_ec2_transit_gateway.this.id
 }
+```
 
-output "transit_gateway_arn" {
-  value       = aws_ec2_transit_gateway.tgw.arn
-  description = "The ARN of the Transit Gateway"
-}
+COMMIT_MSG: Add variables and CI/CD pipeline configuration for Transit Gateway module
+FILE_PATH: terraform/modules/transit_gateway/variables.tf
