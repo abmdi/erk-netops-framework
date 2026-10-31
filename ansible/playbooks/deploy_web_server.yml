@@ -1,46 +1,59 @@
-yaml
----
-- name: Deploy and configure a web server on Ubuntu
+- name: Deploy and configure a secure web server
   hosts: web_servers
   become: yes
   vars:
-    # Define variables for package and service
-    web_package: apache2
-    web_service: apache2
+    http_port: 80
+    https_port: 443
+    server_admin: admin@example.com
 
   tasks:
-    - name: Ensure web server package is installed
-      apt:
-        name: "{{ web_package }}"
+    # Install necessary packages
+    - name: Ensure Apache is installed
+      ansible.builtin.yum:
+        name: httpd
         state: present
-        update_cache: yes
 
-    - name: Ensure web server service is running
-      service:
-        name: "{{ web_service }}"
+    # Start and enable Apache service
+    - name: Ensure httpd is started and enabled
+      ansible.builtin.service:
+        name: httpd
         state: started
         enabled: yes
 
-    - name: Deploy default index.html
-      copy:
-        content: "<html><body><h1>Welcome to the web server!</h1></body></html>"
-        dest: /var/www/html/index.html
-        owner: www-data
-        group: www-data
-        mode: '0644'
-
-    - name: Open firewall for HTTP
-      ufw:
-        rule: allow
-        name: 'Apache Full'
+    # Setup firewall rules for HTTP and HTTPS
+    - name: Open firewall for HTTP and HTTPS
+      ansible.builtin.firewalld:
+        service: "{{ item }}"
+        permanent: yes
         state: enabled
+      loop:
+        - http
+        - https
+      notify: restart firewall
 
-    - name: Verify web server is running
-      uri:
-        url: http://localhost
-        status_code: 200
-      register: http_response
+    # Configure SELinux for HTTPD
+    - name: Allow HTTPD and HTTPSD through SELinux
+      ansible.builtin.command: setsebool -P httpd_can_network_connect 1
 
-    - name: Display web server response
-      debug:
-        msg: "Web server is running, received response: {{ http_response.content }}"
+    # Deploy a basic HTML page
+    - name: Deploy index.html
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Welcome to Your Secure Web Server</title>
+          </head>
+          <body>
+              <h1>Hello, World!</h1>
+              <p>This is a secure web server managed by Ansible.</p>
+          </body>
+          </html>
+
+  handlers:
+    # Restart firewall in case of changes
+    - name: restart firewall
+      ansible.builtin.service:
+        name: firewalld
+        state: restarted
