@@ -1,72 +1,45 @@
-yaml
 ---
-- name: Setup Nginx Web Server
+- name: Configure Nginx on Ubuntu Servers
   hosts: web_servers
-  become: yes
+  become: true  # Elevate privilege to install and configure software
   vars:
-    nginx_package: nginx
-    web_root: /var/www/html
-    index_file: index.html
+    nginx_conf_path: /etc/nginx/sites-available/default
 
   tasks:
-    # Update the package manager cache
-    - name: Update apt cache
+    - name: Ensure Nginx is installed
       apt:
-        update_cache: yes
-      when: ansible_os_family == "Debian"
-
-    # Ensure Nginx is installed
-    - name: Install Nginx
-      apt:
-        name: "{{ nginx_package }}"
+        name: nginx
         state: present
-      when: ansible_os_family == "Debian"
+        update_cache: yes  # Update package database before installing
 
-    - name: Install Nginx
-      yum:
-        name: "{{ nginx_package }}"
-        state: present
-      when: ansible_os_family == "RedHat"
-
-    # Start and enable Nginx service
-    - name: Ensure Nginx is running and enabled
-      service:
-        name: "{{ nginx_package }}"
+    - name: Ensure Nginx is running and enabled on boot
+      systemd:
+        name: nginx
         state: started
         enabled: yes
 
-    # Deploy a simple index.html to the web root
-    - name: Create index.html
-      copy:
-        dest: "{{ web_root }}/{{ index_file }}"
-        content: |
-          <html>
-          <head>
-              <title>Welcome to Nginx!</title>
-          </head>
-          <body>
-              <h1>Hello from Nginx on {{ ansible_hostname }}!</h1>
-          </body>
-          </html>
+    - name: Configure Nginx
+      template:
+        src: templates/nginx.j2  # Jinja2 template for Nginx configuration
+        dest: "{{ nginx_conf_path }}"
+        owner: root
+        group: root
+        mode: '0644'
 
-    # Open HTTP port in firewall if present
-    - name: Open HTTP port in firewall (Debian)
-      ufw:
-        rule: allow
-        name: "Nginx HTTP"
-      when: ansible_os_family == "Debian"
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      failed_when: "'successful' not in nginx_test.stdout"  # Ensure config test passes
 
-    - name: Open HTTP port in firewall (RedHat)
-      firewalld:
-        service: http
-        permanent: yes
-        state: enabled
-      when: ansible_os_family == "RedHat"
-      notify:
-        - reload firewalld
+    - name: Reload Nginx to apply changes
+      systemd:
+        name: nginx
+        state: reloaded
+      when: "'successful' in nginx_test.stdout"  # Reload only if config test was successful
 
   handlers:
-    - name: reload firewalld
-      service:
-        name: firewalld
-        state: reloaded
+    - name: Restart Nginx
+      systemd:
+        name: nginx
+        state: restarted
+---
