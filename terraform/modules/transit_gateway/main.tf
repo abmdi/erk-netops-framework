@@ -1,33 +1,40 @@
-hcl
-// Define the Terraform provider for AWS
 provider "aws" {
   region = var.region
 }
 
-// Module for creating an AWS Transit Gateway
-module "transit_gateway" {
-  source  = "terraform-aws-modules/transit-gateway/aws"
-  version = "~> 2.0"
+resource "aws_ec2_transit_gateway" "tgw" {
+  description = var.tgw_description
 
-  // Basic Transit Gateway configuration
-  name        = var.transit_gateway_name
-  description = var.transit_gateway_description
+  // Enable DNS support for the Transit Gateway
+  dns_support = "enable"
 
-  // Options for the Transit Gateway
-  amazon_side_asn       = var.amazon_side_asn
-  auto_accept_shared_attachments = var.auto_accept_shared_attachments
-  default_route_table_association = var.default_route_table_association
-  default_route_table_propagation = var.default_route_table_propagation
+  // Enable VPN ECMP support for more efficient routing
+  vpn_ecmp_support = "enable"
 
-  // Tagging for the Transit Gateway resources
+  // Default route table association setting
+  default_route_table_association = "enable"
+
+  // Default route table propagation setting
+  default_route_table_propagation = "enable"
+
+  // Amazon side ASN for the Transit Gateway
+  amazon_side_asn = var.amazon_side_asn
+
   tags = {
-    Environment = var.environment
-    Project     = var.project_name
+    Name = var.tgw_name
   }
 }
 
-// Output the ID of the created Transit Gateway
+resource "aws_ec2_transit_gateway_route_table" "tgw_route_table" {
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+
+  tags = {
+    Name = "${var.tgw_name}-route-table"
+  }
+}
+
+// Output the Transit Gateway ID
 output "transit_gateway_id" {
-  description = "ID of the AWS Transit Gateway"
-  value       = module.transit_gateway.this_ec2_transit_gateway_id
+  description = "The ID of the created Transit Gateway"
+  value       = aws_ec2_transit_gateway.tgw.id
 }
