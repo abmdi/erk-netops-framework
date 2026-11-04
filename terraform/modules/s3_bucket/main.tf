@@ -1,40 +1,56 @@
 provider "aws" {
+  # AWS region where the resources will be created
   region = var.aws_region
 }
 
 resource "aws_s3_bucket" "example" {
+  # S3 bucket name
   bucket = var.bucket_name
 
-  // Enable versioning to protect against accidental deletion
+  # Enable versioning to keep multiple versions of an object in the same bucket
   versioning {
     enabled = true
   }
 
-  // Enable server-side encryption for data protection
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+  # Define lifecycle rules for the bucket
+  lifecycle_rule {
+    id      = "log"
+    enabled = true
+
+    # Transition objects to Glacier after 30 days
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
+    }
+
+    # Expire objects after 365 days
+    expiration {
+      days = 365
     }
   }
 
-  // Block all public access to the bucket
-  block_public_access = true
+  tags = {
+    # Tag for identifying the purpose of the bucket
+    Name        = var.bucket_name
+    Environment = var.environment
+  }
 }
 
 variable "aws_region" {
-  description = "The AWS region to create the bucket in"
+  # AWS region variable
+  description = "The AWS region to create resources in"
   type        = string
-  default     = "us-east-1"
 }
 
 variable "bucket_name" {
+  # Bucket name variable
   description = "The name of the S3 bucket"
   type        = string
 }
 
-output "bucket_arn" {
-  description = "The ARN of the S3 bucket"
-  value       = aws_s3_bucket.example.arn
+variable "environment" {
+  # Environment tag for the bucket
+  description = "The environment in which this bucket is used"
+  type        = string
+  default     = "dev"
 }
