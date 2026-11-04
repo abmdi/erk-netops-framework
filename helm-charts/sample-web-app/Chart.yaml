@@ -1,5 +1,9 @@
+yaml
 apiVersion: v2
 name: sample-web-app
 description: A Helm chart for deploying a sample web application
 version: 0.1.0
-appVersion: 1.0.0
+appVersion: "1.0.0"
+```
+
+FILE_PATH: helm-charts/sample-web-app/values.yaml
