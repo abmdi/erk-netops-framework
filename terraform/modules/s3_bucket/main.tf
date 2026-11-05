@@ -1,56 +1,49 @@
 provider "aws" {
-  # AWS region where the resources will be created
-  region = var.aws_region
+  # Specify the AWS region
+  region = var.region
 }
 
-resource "aws_s3_bucket" "example" {
-  # S3 bucket name
+resource "aws_s3_bucket" "bucket" {
+  # Define the S3 bucket name
   bucket = var.bucket_name
 
-  # Enable versioning to keep multiple versions of an object in the same bucket
+  # Enable versioning for the S3 bucket
   versioning {
     enabled = true
   }
 
-  # Define lifecycle rules for the bucket
-  lifecycle_rule {
-    id      = "log"
-    enabled = true
-
-    # Transition objects to Glacier after 30 days
-    transition {
-      days          = 30
-      storage_class = "GLACIER"
-    }
-
-    # Expire objects after 365 days
-    expiration {
-      days = 365
+  # Apply server-side encryption by default
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
     }
   }
 
+  # Set the ACL policy for public access to private
+  acl = "private"
+
+  # Add a tag to the bucket for identification
   tags = {
-    # Tag for identifying the purpose of the bucket
     Name        = var.bucket_name
     Environment = var.environment
   }
 }
 
-variable "aws_region" {
-  # AWS region variable
-  description = "The AWS region to create resources in"
+variable "bucket_name" {
+  description = "The name of the S3 bucket."
   type        = string
 }
 
-variable "bucket_name" {
-  # Bucket name variable
-  description = "The name of the S3 bucket"
+variable "region" {
+  description = "The AWS region to deploy resources into."
   type        = string
+  default     = "us-east-1"
 }
 
 variable "environment" {
-  # Environment tag for the bucket
-  description = "The environment in which this bucket is used"
+  description = "The environment in which this resource is deployed."
   type        = string
   default     = "dev"
 }
