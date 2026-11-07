@@ -1,28 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "nginx-chart.fullname" . }}
+  name: nginx-deployment
   labels:
-    app: {{ include "nginx-chart.name" . }}
+    app: nginx
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.replicaCount }} # Set the number of replicas
   selector:
     matchLabels:
-      app: {{ include "nginx-chart.name" . }}
+      app: nginx
   template:
     metadata:
       labels:
-        app: {{ include "nginx-chart.name" . }}
+        app: nginx
     spec:
       containers:
-        - name: {{ .Chart.Name }}
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
-          ports:
-            - containerPort: 80
-          resources:
-            limits:
-              cpu: {{ .Values.resources.limits.cpu }}
-              memory: {{ .Values.resources.limits.memory }}
-            requests:
-              cpu: {{ .Values.resources.requests.cpu }}
-              memory: {{ .Values.resources.requests.memory }}
+      - name: nginx
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # Use specified image and tag
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "{{ .Values.resources.requests.cpu }}" # CPU request for the container
+            memory: "{{ .Values.resources.requests.memory }}" # Memory request for the container
+          limits:
+            cpu: "{{ .Values.resources.limits.cpu }}" # CPU limit for the container
+            memory: "{{ .Values.resources.limits.memory }}" # Memory limit for the container
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d # Mount config volume to nginx conf directory
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-configmap # Reference to the ConfigMap for nginx configuration
