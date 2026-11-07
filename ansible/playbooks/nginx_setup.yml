@@ -1,45 +1,49 @@
+yaml
 ---
-- name: Configure Nginx on Ubuntu Servers
-  hosts: web_servers
-  become: true  # Elevate privilege to install and configure software
+- name: Setup Nginx on Ubuntu Server
+  hosts: webservers
+  become: yes
   vars:
-    nginx_conf_path: /etc/nginx/sites-available/default
+    nginx_package: nginx
+    nginx_service: nginx
 
   tasks:
     - name: Ensure Nginx is installed
       apt:
-        name: nginx
+        name: "{{ nginx_package }}"
         state: present
-        update_cache: yes  # Update package database before installing
+        update_cache: yes
+      tags: nginx
 
-    - name: Ensure Nginx is running and enabled on boot
+    - name: Configure Nginx to start on boot
       systemd:
-        name: nginx
-        state: started
+        name: "{{ nginx_service }}"
         enabled: yes
+      tags: nginx
 
-    - name: Configure Nginx
-      template:
-        src: templates/nginx.j2  # Jinja2 template for Nginx configuration
-        dest: "{{ nginx_conf_path }}"
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Test Nginx configuration
-      command: nginx -t
-      register: nginx_test
-      failed_when: "'successful' not in nginx_test.stdout"  # Ensure config test passes
-
-    - name: Reload Nginx to apply changes
+    - name: Start Nginx service
       systemd:
-        name: nginx
-        state: reloaded
-      when: "'successful' in nginx_test.stdout"  # Reload only if config test was successful
+        name: "{{ nginx_service }}"
+        state: started
+      tags: nginx
+
+    - name: Ensure Nginx configuration directory exists
+      file:
+        path: /etc/nginx/conf.d
+        state: directory
+      tags: nginx
+
+    - name: Deploy custom Nginx configuration
+      copy:
+        src: files/custom_nginx.conf
+        dest: /etc/nginx/conf.d/custom_nginx.conf
+      notify:
+        - Restart Nginx
+      tags: nginx
 
   handlers:
     - name: Restart Nginx
       systemd:
-        name: nginx
+        name: "{{ nginx_service }}"
         state: restarted
----
+      tags: nginx
