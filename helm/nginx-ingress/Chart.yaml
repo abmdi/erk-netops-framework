@@ -1,9 +1,5 @@
-yaml
 apiVersion: v2
 name: nginx-ingress
-description: A Helm chart for NGINX Ingress Controller
+description: A Helm chart for deploying Nginx Ingress Controller
 version: 1.0.0
-appVersion: 1.2.0
-```
-
-FILE_PATH: helm/nginx-ingress/values.yaml
+appVersion: 1.0.0
