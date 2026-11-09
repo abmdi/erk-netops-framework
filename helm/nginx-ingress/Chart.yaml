@@ -1,6 +1,9 @@
+yaml
 apiVersion: v2
 name: nginx-ingress
-description: A Helm chart for Kubernetes for deploying Nginx Ingress Controller
-type: application
+description: A Helm chart for NGINX Ingress Controller
 version: 1.0.0
-appVersion: 1.1.0
+appVersion: 1.2.0
+```
+
+FILE_PATH: helm/nginx-ingress/values.yaml
