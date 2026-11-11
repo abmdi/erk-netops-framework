@@ -1,0 +1,8 @@
+apiVersion: v2
+name: nginx
+description: A Helm chart for deploying Nginx on Kubernetes
+version: 1.0.0
+appVersion: "1.21.1"
+
+---
+FILE_PATH: helm/nginx/values.yaml
