@@ -1,11 +1,12 @@
-yaml
 ---
-- name: Setup Nginx on Ubuntu Server
-  hosts: webservers
+- name: Configure Nginx on Ubuntu server
+  hosts: web_servers
   become: yes
   vars:
     nginx_package: nginx
     nginx_service: nginx
+    nginx_conf_file: /etc/nginx/nginx.conf
+    nginx_default_site: /etc/nginx/sites-available/default
 
   tasks:
     - name: Ensure Nginx is installed
@@ -13,37 +14,33 @@ yaml
         name: "{{ nginx_package }}"
         state: present
         update_cache: yes
-      tags: nginx
 
-    - name: Configure Nginx to start on boot
-      systemd:
-        name: "{{ nginx_service }}"
-        enabled: yes
-      tags: nginx
-
-    - name: Start Nginx service
-      systemd:
+    - name: Ensure Nginx service is enabled and started
+      service:
         name: "{{ nginx_service }}"
         state: started
-      tags: nginx
+        enabled: yes
 
-    - name: Ensure Nginx configuration directory exists
-      file:
-        path: /etc/nginx/conf.d
-        state: directory
-      tags: nginx
-
-    - name: Deploy custom Nginx configuration
+    - name: Backup default Nginx configuration file
       copy:
-        src: files/custom_nginx.conf
-        dest: /etc/nginx/conf.d/custom_nginx.conf
+        src: "{{ nginx_default_site }}"
+        dest: "{{ nginx_default_site }}.bak"
+        remote_src: yes
+        force: no
       notify:
-        - Restart Nginx
-      tags: nginx
+        - Reload Nginx
+
+    - name: Configure Nginx to serve custom content
+      lineinfile:
+        path: "{{ nginx_conf_file }}"
+        regexp: '^#?server_names_hash_bucket_size'
+        line: 'server_names_hash_bucket_size 64;'
+        state: present
+      notify:
+        - Reload Nginx
 
   handlers:
-    - name: Restart Nginx
-      systemd:
+    - name: Reload Nginx
+      service:
         name: "{{ nginx_service }}"
-        state: restarted
-      tags: nginx
+        state: reloaded
