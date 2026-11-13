@@ -1,59 +1,47 @@
-- name: Deploy and configure a secure web server
+---
+- name: Deploy Web Server on Ubuntu
   hosts: web_servers
   become: yes
   vars:
-    http_port: 80
-    https_port: 443
-    server_admin: admin@example.com
+    # Define the package to be installed
+    web_package: apache2
+    # Define the service name
+    web_service: apache2
 
   tasks:
-    # Install necessary packages
-    - name: Ensure Apache is installed
-      ansible.builtin.yum:
-        name: httpd
+    - name: Ensure the latest version of the package index is installed
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install web server package
+      apt:
+        name: "{{ web_package }}"
         state: present
 
-    # Start and enable Apache service
-    - name: Ensure httpd is started and enabled
-      ansible.builtin.service:
-        name: httpd
+    - name: Ensure web service is enabled and started
+      service:
+        name: "{{ web_service }}"
         state: started
         enabled: yes
 
-    # Setup firewall rules for HTTP and HTTPS
-    - name: Open firewall for HTTP and HTTPS
-      ansible.builtin.firewalld:
-        service: "{{ item }}"
-        permanent: yes
-        state: enabled
-      loop:
-        - http
-        - https
-      notify: restart firewall
-
-    # Configure SELinux for HTTPD
-    - name: Allow HTTPD and HTTPSD through SELinux
-      ansible.builtin.command: setsebool -P httpd_can_network_connect 1
-
-    # Deploy a basic HTML page
-    - name: Deploy index.html
-      ansible.builtin.copy:
+    - name: Create a simple HTML file
+      copy:
         dest: /var/www/html/index.html
-        content: |
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Welcome to Your Secure Web Server</title>
-          </head>
-          <body>
-              <h1>Hello, World!</h1>
-              <p>This is a secure web server managed by Ansible.</p>
-          </body>
-          </html>
+        content: "<html><body><h1>Welcome to the Web Server</h1></body></html>"
+        owner: www-data
+        group: www-data
+        mode: '0644'
 
-  handlers:
-    # Restart firewall in case of changes
-    - name: restart firewall
-      ansible.builtin.service:
-        name: firewalld
-        state: restarted
+    - name: Open HTTP port in UFW firewall
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+        comment: Allow HTTP traffic
+
+    - name: Ensure UFW is enabled
+      ufw:
+        state: enabled
+        policy: allow
+        logging: on
