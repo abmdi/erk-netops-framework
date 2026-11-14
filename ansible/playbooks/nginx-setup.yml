@@ -1,0 +1,52 @@
+---
+- name: Configure Nginx Web Server
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_package: nginx
+    document_root: /var/www/html
+    index_file: index.html
+
+  tasks:
+    # Ensure the Nginx package is installed
+    - name: Install Nginx
+      apt:
+        name: "{{ nginx_package }}"
+        state: present
+      notify:
+        - Start Nginx
+
+    # Ensure the document root directory exists
+    - name: Create document root directory
+      file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    # Deploy a simple index.html file
+    - name: Deploy index.html
+      copy:
+        dest: "{{ document_root }}/{{ index_file }}"
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Welcome to Nginx!</title>
+          </head>
+          <body>
+              <h1>Success! The Nginx server is configured.</h1>
+          </body>
+          </html>
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+  handlers:
+    # Ensure Nginx service is started
+    - name: Start Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
