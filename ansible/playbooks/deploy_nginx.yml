@@ -1,42 +1,56 @@
-yaml
 ---
-- name: Deploy Nginx on Ubuntu Servers
+- name: Deploy and configure Nginx on Ubuntu
   hosts: web_servers
   become: yes
   vars:
-    nginx_pkg_name: nginx
-    nginx_service_name: nginx
+    nginx_package: nginx
+    nginx_service: nginx
+    nginx_config_path: /etc/nginx/nginx.conf
+    custom_index_path: /var/www/html/index.html
 
   tasks:
-    - name: Update and upgrade apt packages
+    # Update and upgrade apt packages
+    - name: Update apt package list
       apt:
         update_cache: yes
-        upgrade: dist
-      tags: [update]
+        cache_valid_time: 3600
 
+    - name: Upgrade all apt packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+
+    # Install Nginx package
     - name: Install Nginx
       apt:
-        name: "{{ nginx_pkg_name }}"
+        name: "{{ nginx_package }}"
         state: present
-      tags: [install]
 
-    - name: Start and enable Nginx service
-      systemd:
-        name: "{{ nginx_service_name }}"
+    # Ensure Nginx service is enabled and started
+    - name: Ensure Nginx is running
+      service:
+        name: "{{ nginx_service }}"
         state: started
         enabled: yes
-      tags: [service]
 
-    - name: Ensure Nginx is listening on port 80
-      lineinfile:
-        path: /etc/nginx/sites-available/default
-        regexp: 'listen 80;'
-        line: 'listen 80 default_server;'
-      notify: Restart Nginx
-      tags: [configuration]
+    # Configure Nginx with a custom index page
+    - name: Create custom index.html
+      copy:
+        dest: "{{ custom_index_path }}"
+        content: |
+          <html>
+          <head><title>Welcome to Nginx</title></head>
+          <body><h1>Welcome to Nginx Server</h1></body>
+          </html>
+
+    # Ensure Nginx configuration is valid
+    - name: Validate Nginx configuration
+      command: nginx -t
+      notify: Reload Nginx
 
   handlers:
-    - name: Restart Nginx
-      systemd:
-        name: "{{ nginx_service_name }}"
-        state: restarted
+    # Handler to reload Nginx when configuration changes
+    - name: Reload Nginx
+      service:
+        name: "{{ nginx_service }}"
+        state: reloaded
