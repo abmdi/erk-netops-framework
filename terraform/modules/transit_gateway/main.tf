@@ -1,29 +1,22 @@
 hcl
-# Terraform module for deploying an AWS Transit Gateway
-
-# Define variables for the Transit Gateway
-variable "transit_gateway_name" {
-  description = "Name of the transit gateway"
-  type        = string
+// Define the AWS provider
+provider "aws" {
+  region = var.region
 }
 
-variable "amazon_side_asn" {
-  description = "The Autonomous System Number (ASN) for the Amazon side of the gateway"
-  type        = number
-  default     = 64512
-}
-
-# Create the Transit Gateway
-resource "aws_ec2_transit_gateway" "this" {
-  description        = var.transit_gateway_name
-  amazon_side_asn    = var.amazon_side_asn
+// Module to create a Transit Gateway
+resource "aws_ec2_transit_gateway" "main" {
+  description = var.transit_gateway_description
   tags = {
     Name = var.transit_gateway_name
   }
 }
 
-# Output the ID of the Transit Gateway
+// Output the Transit Gateway ID
 output "transit_gateway_id" {
-  description = "The ID of the created Transit Gateway"
-  value       = aws_ec2_transit_gateway.this.id
+  value = aws_ec2_transit_gateway.main.id
 }
+```
+
+COMMIT_MSG: Add variables and outputs for Transit Gateway module
+FILE_PATH: terraform/modules/transit_gateway/variables.tf
