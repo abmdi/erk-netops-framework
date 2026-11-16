@@ -1,49 +1,46 @@
+hcl
 provider "aws" {
-  # Specify the AWS region
-  region = var.region
+  version = "~> 3.0"
+  region  = var.region
 }
 
-resource "aws_s3_bucket" "bucket" {
-  # Define the S3 bucket name
+module "s3_bucket" {
+  source = "./s3_bucket"
+
+  bucket_name = var.bucket_name
+  log_bucket  = var.log_bucket
+}
+
+resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 
-  # Enable versioning for the S3 bucket
+  # Enable versioning to keep track of changes to files
   versioning {
     enabled = true
   }
 
-  # Apply server-side encryption by default
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
+  # Enable logging for the bucket to another S3 bucket
+  logging {
+    target_bucket = var.log_bucket
+    target_prefix = "${var.bucket_name}/"
   }
 
-  # Set the ACL policy for public access to private
+  # Ensure the bucket ACL is set to private
   acl = "private"
-
-  # Add a tag to the bucket for identification
-  tags = {
-    Name        = var.bucket_name
-    Environment = var.environment
-  }
 }
 
 variable "bucket_name" {
-  description = "The name of the S3 bucket."
+  description = "The name of the S3 bucket to create"
+  type        = string
+}
+
+variable "log_bucket" {
+  description = "The name of the S3 bucket to store logs"
   type        = string
 }
 
 variable "region" {
-  description = "The AWS region to deploy resources into."
+  description = "The AWS region to deploy the resources"
   type        = string
   default     = "us-east-1"
-}
-
-variable "environment" {
-  description = "The environment in which this resource is deployed."
-  type        = string
-  default     = "dev"
 }
