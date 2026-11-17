@@ -1,11 +1,22 @@
 hcl
-// Define the AWS provider
+// Define a module to create an S3 bucket with versioning enabled
+
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+}
+
+variable "region" {
+  description = "The AWS region where the S3 bucket will be created"
+  type        = string
+  default     = "us-west-2"
+}
+
 provider "aws" {
   region = var.region
 }
 
-// Create an S3 bucket with versioning enabled
-resource "aws_s3_bucket" "my_bucket" {
+resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 
   // Enable versioning for the bucket
@@ -13,30 +24,34 @@ resource "aws_s3_bucket" "my_bucket" {
     enabled = true
   }
 
-  // Define tags for the S3 bucket
+  // Enable server-side encryption by default
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  // Enable access logging
+  logging {
+    target_bucket = "your-logging-bucket-name"
+    target_prefix = "log/"
+  }
+
+  // Tags for the bucket
   tags = {
-    Name        = var.bucket_name
-    Environment = var.environment
+    Environment = "Production"
+    ManagedBy   = "Terraform"
   }
 }
 
-// Define input variables
-variable "region" {
-  description = "The AWS region to deploy the resources."
-  type        = string
-}
-
-variable "bucket_name" {
-  description = "The name of the S3 bucket."
-  type        = string
-}
-
-variable "environment" {
-  description = "The environment name (e.g., dev, prod)."
-  type        = string
+output "bucket_arn" {
+  description = "The ARN of the S3 bucket"
+  value       = aws_s3_bucket.this.arn
 }
 
 output "bucket_name" {
-  description = "The name of the created S3 bucket."
-  value       = aws_s3_bucket.my_bucket.bucket
+  description = "The name of the S3 bucket"
+  value       = aws_s3_bucket.this.bucket
 }
