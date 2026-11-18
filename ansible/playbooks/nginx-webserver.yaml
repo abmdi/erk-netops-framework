@@ -1,0 +1,61 @@
+---
+- name: Deploy and configure Nginx web server
+  hosts: web_servers
+  become: yes
+  vars:
+    nginx_package: nginx
+    document_root: /var/www/html
+
+  tasks:
+    - name: Ensure Nginx is installed
+      apt:
+        name: "{{ nginx_package }}"
+        state: present
+      tags: nginx
+
+    - name: Start and enable Nginx service
+      systemd:
+        name: "{{ nginx_package }}"
+        enabled: yes
+        state: started
+      tags: nginx
+
+    - name: Create custom index.html
+      copy:
+        dest: "{{ document_root }}/index.html"
+        content: |
+          <html>
+            <head>
+              <title>Welcome to Nginx!</title>
+            </head>
+            <body>
+              <h1>Hello from Nginx deployed by Ansible!</h1>
+            </body>
+          </html>
+      tags: nginx
+
+    - name: Open HTTP port in firewall
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+        state: enabled
+      when: ansible_os_family == "Debian"
+      tags: firewall
+
+    - name: Verify Nginx is running
+      shell: curl -I http://localhost
+      register: curl_result
+      changed_when: false
+
+    - name: Ensure HTTP response is 200
+      assert:
+        that:
+          - curl_result.stdout.find("200 OK") != -1
+      tags: verify
+
+  handlers:
+    - name: Restart Nginx
+      systemd:
+        name: "{{ nginx_package }}"
+        state: restarted
