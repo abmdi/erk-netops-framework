@@ -1,68 +1,86 @@
+hcl
+// Define the AWS provider with required region
 provider "aws" {
   region = var.region
 }
 
-# Define the Transit Gateway resource
-resource "aws_ec2_transit_gateway" "this" {
+// Module to create AWS Transit Gateway
+resource "aws_ec2_transit_gateway" "example" {
   description = var.description
 
-  # Set Amazon side ASN for the TGW
-  amazon_side_asn = var.amazon_side_asn
-
-  # Enable default route table association
+  // Configure optional settings
+  auto_accept_shared_attachments = var.auto_accept_shared_attachments
   default_route_table_association = var.default_route_table_association
-
-  # Enable default route table propagation
   default_route_table_propagation = var.default_route_table_propagation
-
+  dns_support = var.dns_support
+  vpn_ecmp_support = var.vpn_ecmp_support
   tags = var.tags
 }
 
-# Outputs
+// Output the Transit Gateway ID for further use
 output "transit_gateway_id" {
   description = "The ID of the Transit Gateway"
-  value       = aws_ec2_transit_gateway.this.id
+  value       = aws_ec2_transit_gateway.example.id
 }
+```
 
-output "transit_gateway_arn" {
-  description = "The ARN of the Transit Gateway"
-  value       = aws_ec2_transit_gateway.this.arn
-}
+```hcl
+// Define input variables with default values and descriptions
 
-# Variables
+// AWS region where resources will be created
 variable "region" {
-  description = "The AWS region to deploy the Transit Gateway"
+  description = "The AWS region to deploy resources"
   type        = string
+  default     = "us-east-1"
 }
 
+// Description for the Transit Gateway
 variable "description" {
-  description = "Description for the Transit Gateway"
+  description = "Description of the Transit Gateway"
   type        = string
-  default     = "Transit Gateway for hybrid network infrastructure"
+  default     = "My Transit Gateway"
 }
 
-variable "amazon_side_asn" {
-  description = "The ASN for the Amazon side of the Transit Gateway"
-  type        = number
-  default     = 64512
+// Auto-accept shared attachments setting
+variable "auto_accept_shared_attachments" {
+  description = "Auto-accept shared attachments"
+  type        = string
+  default     = "disable"
 }
 
+// Default route table association setting
 variable "default_route_table_association" {
-  description = "Whether to enable association with the default route table"
-  type        = bool
-  default     = true
+  description = "Enable or disable default route table association"
+  type        = string
+  default     = "enable"
 }
 
+// Default route table propagation setting
 variable "default_route_table_propagation" {
-  description = "Whether to enable propagation with the default route table"
-  type        = bool
-  default     = true
+  description = "Enable or disable default route table propagation"
+  type        = string
+  default     = "enable"
 }
 
+// DNS support setting
+variable "dns_support" {
+  description = "Enable or disable DNS support"
+  type        = string
+  default     = "enable"
+}
+
+// VPN ECMP support setting
+variable "vpn_ecmp_support" {
+  description = "Enable or disable VPN ECMP support"
+  type        = string
+  default     = "disable"
+}
+
+// Tags for the Transit Gateway
 variable "tags" {
-  description = "Tags to assign to the Transit Gateway"
+  description = "A map of tags to assign to the resource"
   type        = map(string)
   default     = {
-    Name = "erk-netops-transit-gateway"
+    Name = "example-transit-gateway"
   }
 }
