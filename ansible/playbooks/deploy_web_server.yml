@@ -1,47 +1,68 @@
 ---
-- name: Deploy Web Server on Ubuntu
+- name: Deploy and configure a secure web server
   hosts: web_servers
   become: yes
   vars:
-    # Define the package to be installed
-    web_package: apache2
-    # Define the service name
-    web_service: apache2
-
+    http_port: 80
+    https_port: 443
+    server_admin: admin@example.com
   tasks:
-    - name: Ensure the latest version of the package index is installed
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
-
-    - name: Install web server package
-      apt:
-        name: "{{ web_package }}"
+    - name: Ensure Apache is installed
+      ansible.builtin.yum:
+        name: httpd
         state: present
 
-    - name: Ensure web service is enabled and started
-      service:
-        name: "{{ web_service }}"
+    - name: Start and enable Apache service
+      ansible.builtin.service:
+        name: httpd
         state: started
         enabled: yes
 
-    - name: Create a simple HTML file
-      copy:
+    - name: Install firewalld
+      ansible.builtin.yum:
+        name: firewalld
+        state: present
+
+    - name: Start and enable firewalld service
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Allow HTTP and HTTPS through the firewall
+      ansible.builtin.firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - http
+        - https
+
+    - name: Reload firewalld to apply changes
+      ansible.builtin.firewalld:
+        state: reloaded
+
+    - name: Ensure mod_ssl is installed for HTTPS
+      ansible.builtin.yum:
+        name: mod_ssl
+        state: present
+
+    - name: Deploy custom index.html
+      ansible.builtin.copy:
+        src: files/index.html
         dest: /var/www/html/index.html
-        content: "<html><body><h1>Welcome to the Web Server</h1></body></html>"
-        owner: www-data
-        group: www-data
+        owner: apache
+        group: apache
         mode: '0644'
 
-    - name: Open HTTP port in UFW firewall
-      ufw:
-        rule: allow
-        port: '80'
-        proto: tcp
-        comment: Allow HTTP traffic
+    - name: Set server admin in Apache configuration
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^ServerAdmin'
+        line: "ServerAdmin {{ server_admin }}"
+        state: present
 
-    - name: Ensure UFW is enabled
-      ufw:
-        state: enabled
-        policy: allow
-        logging: on
+    - name: Restart Apache to apply changes
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
