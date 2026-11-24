@@ -1,56 +1,91 @@
 ---
-- name: Deploy and configure Nginx on Ubuntu
+- name: Deploy and configure Nginx web server
   hosts: web_servers
   become: yes
   vars:
-    nginx_package: nginx
-    nginx_service: nginx
-    nginx_config_path: /etc/nginx/nginx.conf
-    custom_index_path: /var/www/html/index.html
+    nginx_conf_path: /etc/nginx/nginx.conf
 
   tasks:
-    # Update and upgrade apt packages
-    - name: Update apt package list
+    - name: Ensure Nginx is installed
       apt:
-        update_cache: yes
-        cache_valid_time: 3600
-
-    - name: Upgrade all apt packages
-      apt:
-        upgrade: dist
-        autoremove: yes
-
-    # Install Nginx package
-    - name: Install Nginx
-      apt:
-        name: "{{ nginx_package }}"
+        name: nginx
         state: present
+        update_cache: yes
 
-    # Ensure Nginx service is enabled and started
-    - name: Ensure Nginx is running
+    - name: Start and enable Nginx service
       service:
-        name: "{{ nginx_service }}"
+        name: nginx
         state: started
         enabled: yes
 
-    # Configure Nginx with a custom index page
-    - name: Create custom index.html
+    - name: Create custom Nginx configuration
       copy:
-        dest: "{{ custom_index_path }}"
+        dest: "{{ nginx_conf_path }}"
         content: |
-          <html>
-          <head><title>Welcome to Nginx</title></head>
-          <body><h1>Welcome to Nginx Server</h1></body>
-          </html>
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
+          include /etc/nginx/modules-enabled/*.conf;
 
-    # Ensure Nginx configuration is valid
-    - name: Validate Nginx configuration
+          events {
+              worker_connections 768;
+          }
+
+          http {
+              sendfile on;
+              tcp_nopush on;
+              tcp_nodelay on;
+              keepalive_timeout 65;
+              types_hash_max_size 2048;
+
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+
+              access_log /var/log/nginx/access.log;
+              error_log /var/log/nginx/error.log;
+
+              gzip on;
+
+              include /etc/nginx/conf.d/*.conf;
+              include /etc/nginx/sites-enabled/*;
+          }
+
+    - name: Remove default Nginx site configuration
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Create custom site configuration
+      copy:
+        dest: /etc/nginx/sites-available/my_site
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+
+              root /var/www/html;
+              index index.html index.htm index.nginx-debian.html;
+
+              server_name _;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+
+    - name: Enable custom site
+      file:
+        src: /etc/nginx/sites-available/my_site
+        dest: /etc/nginx/sites-enabled/my_site
+        state: link
+
+    - name: Ensure Nginx configuration is valid
       command: nginx -t
-      notify: Reload Nginx
+      notify:
+        - reload nginx
 
   handlers:
-    # Handler to reload Nginx when configuration changes
-    - name: Reload Nginx
+    - name: reload nginx
       service:
-        name: "{{ nginx_service }}"
+        name: nginx
         state: reloaded
