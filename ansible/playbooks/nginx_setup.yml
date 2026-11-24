@@ -1,46 +1,49 @@
+yaml
 ---
-- name: Configure Nginx on Ubuntu server
+- name: Configure Nginx Web Server
   hosts: web_servers
   become: yes
   vars:
     nginx_package: nginx
-    nginx_service: nginx
-    nginx_conf_file: /etc/nginx/nginx.conf
-    nginx_default_site: /etc/nginx/sites-available/default
+    default_index_file: /var/www/html/index.html
 
   tasks:
-    - name: Ensure Nginx is installed
+    # Ensure the Nginx package is installed
+    - name: Install Nginx
       apt:
         name: "{{ nginx_package }}"
         state: present
         update_cache: yes
 
-    - name: Ensure Nginx service is enabled and started
+    # Ensure the Nginx service is running and enabled on boot
+    - name: Ensure Nginx is running
       service:
-        name: "{{ nginx_service }}"
+        name: "{{ nginx_package }}"
         state: started
         enabled: yes
 
-    - name: Backup default Nginx configuration file
+    # Create a custom index.html file
+    - name: Create index.html
       copy:
-        src: "{{ nginx_default_site }}"
-        dest: "{{ nginx_default_site }}.bak"
-        remote_src: yes
-        force: no
-      notify:
-        - Reload Nginx
+        dest: "{{ default_index_file }}"
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Welcome to Nginx!</title>
+          </head>
+          <body>
+              <h1>Success! The Nginx web server is installed and working!</h1>
+          </body>
+          </html>
+      owner: www-data
+      group: www-data
+      mode: '0644'
 
-    - name: Configure Nginx to serve custom content
-      lineinfile:
-        path: "{{ nginx_conf_file }}"
-        regexp: '^#?server_names_hash_bucket_size'
-        line: 'server_names_hash_bucket_size 64;'
-        state: present
-      notify:
-        - Reload Nginx
-
-  handlers:
-    - name: Reload Nginx
-      service:
-        name: "{{ nginx_service }}"
-        state: reloaded
+    # Open HTTP port in the firewall
+    - name: Allow HTTP through the firewall
+      ufw:
+        rule: allow
+        name: 'Nginx HTTP'
+        port: '80'
+        proto: 'tcp'
