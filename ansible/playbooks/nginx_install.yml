@@ -1,53 +1,43 @@
 ---
-- name: Install and configure Nginx on Ubuntu
+- name: Install and configure Nginx web server
   hosts: web_servers
-  become: yes  # Gain root privileges to perform installation
-
+  become: yes
   vars:
-    nginx_conf_path: /etc/nginx/nginx.conf  # Path to the main Nginx configuration file
-    server_name: example.com  # Domain name for the Nginx server
+    nginx_port: 80
+    server_name: "example.com"
 
   tasks:
     - name: Ensure Nginx is installed
       apt:
         name: nginx
         state: present
-        update_cache: yes  # Update the package cache before installing
+        update_cache: yes
 
-    - name: Ensure Nginx service is enabled and running
+    - name: Start and enable Nginx service
       systemd:
         name: nginx
-        enabled: yes
         state: started
+        enabled: yes
 
-    - name: Configure Nginx
-      copy:
-        content: |
-          server {
-              listen 80;
-              server_name {{ server_name }};
-
-              location / {
-                  try_files $uri $uri/ =404;
-              }
-          }
+    - name: Create Nginx configuration file
+      template:
+        src: templates/nginx.conf.j2
         dest: /etc/nginx/sites-available/default
-        owner: root
-        group: root
-        mode: '0644'
+      notify:
+        - Restart Nginx
 
-    - name: Test Nginx configuration
-      command: nginx -t
-      register: nginx_test
-      ignore_errors: yes  # Continue playbook execution even if there are errors
-
-    - name: Fail if Nginx configuration is invalid
-      fail:
-        msg: "Nginx configuration test failed"
-      when: nginx_test.rc != 0
-
-    - name: Reload Nginx to apply changes
+  handlers:
+    - name: Restart Nginx
       systemd:
         name: nginx
-        state: reloaded
-        when: nginx_test.rc == 0  # Only reload if configuration test passed
+        state: restarted
+
+# Template file: templates/nginx.conf.j2
+# server {
+#     listen {{ nginx_port }};
+#     server_name {{ server_name }};
+# 
+#     location / {
+#         try_files $uri $uri/ =404;
+#     }
+# }
