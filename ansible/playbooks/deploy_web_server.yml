@@ -1,12 +1,13 @@
 ---
-- name: Deploy and configure a secure web server
+- name: Deploy Web Server
   hosts: web_servers
   become: yes
   vars:
     http_port: 80
-    https_port: 443
-    server_admin: admin@example.com
+    document_root: /var/www/html
+
   tasks:
+
     - name: Ensure Apache is installed
       ansible.builtin.yum:
         name: httpd
@@ -18,49 +19,28 @@
         state: started
         enabled: yes
 
-    - name: Install firewalld
-      ansible.builtin.yum:
-        name: firewalld
-        state: present
+    - name: Create document root directory
+      ansible.builtin.file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: apache
+        group: apache
+        mode: '0755'
 
-    - name: Start and enable firewalld service
-      ansible.builtin.service:
-        name: firewalld
-        state: started
-        enabled: yes
-
-    - name: Allow HTTP and HTTPS through the firewall
-      ansible.builtin.firewalld:
-        service: "{{ item }}"
-        permanent: yes
-        state: enabled
-      loop:
-        - http
-        - https
-
-    - name: Reload firewalld to apply changes
-      ansible.builtin.firewalld:
-        state: reloaded
-
-    - name: Ensure mod_ssl is installed for HTTPS
-      ansible.builtin.yum:
-        name: mod_ssl
-        state: present
-
-    - name: Deploy custom index.html
+    - name: Deploy index.html to the document root
       ansible.builtin.copy:
-        src: files/index.html
-        dest: /var/www/html/index.html
+        content: "<html><body><h1>Welcome to the Web Server!</h1></body></html>"
+        dest: "{{ document_root }}/index.html"
         owner: apache
         group: apache
         mode: '0644'
 
-    - name: Set server admin in Apache configuration
+    - name: Ensure httpd is listening on the correct port
       ansible.builtin.lineinfile:
         path: /etc/httpd/conf/httpd.conf
-        regexp: '^ServerAdmin'
-        line: "ServerAdmin {{ server_admin }}"
-        state: present
+        regexp: '^Listen '
+        line: "Listen {{ http_port }}"
+        backup: yes
 
     - name: Restart Apache to apply changes
       ansible.builtin.service:
