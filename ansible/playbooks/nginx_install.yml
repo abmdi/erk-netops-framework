@@ -1,43 +1,37 @@
+yaml
 ---
-- name: Install and configure Nginx web server
+- name: Install and configure Nginx
   hosts: web_servers
   become: yes
   vars:
-    nginx_port: 80
-    server_name: "example.com"
+    nginx_conf_path: /etc/nginx/nginx.conf
 
   tasks:
     - name: Ensure Nginx is installed
       apt:
         name: nginx
         state: present
-        update_cache: yes
+      tags: nginx
 
-    - name: Start and enable Nginx service
-      systemd:
+    - name: Ensure Nginx service is running
+      service:
         name: nginx
         state: started
         enabled: yes
+      tags: nginx
 
-    - name: Create Nginx configuration file
-      template:
-        src: templates/nginx.conf.j2
-        dest: /etc/nginx/sites-available/default
-      notify:
-        - Restart Nginx
+    - name: Deploy custom Nginx configuration
+      copy:
+        src: files/nginx.conf
+        dest: "{{ nginx_conf_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Nginx
+      tags: nginx_config
 
   handlers:
     - name: Restart Nginx
-      systemd:
+      service:
         name: nginx
         state: restarted
-
-# Template file: templates/nginx.conf.j2
-# server {
-#     listen {{ nginx_port }};
-#     server_name {{ server_name }};
-# 
-#     location / {
-#         try_files $uri $uri/ =404;
-#     }
-# }
