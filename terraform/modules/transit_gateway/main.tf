@@ -1,36 +1,82 @@
 hcl
-// Terraform module for AWS Transit Gateway
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+  
+  required_version = ">= 0.12"
+}
 
-// Define the AWS provider
 provider "aws" {
   region = var.region
 }
 
-// Create a Transit Gateway
-resource "aws_ec2_transit_gateway" "example" {
-  description = var.transit_gateway_description
-  tags = var.tags
+resource "aws_ec2_transit_gateway" "this" {
+  description = var.description
+
+  // Enable default route table association
+  default_route_table_association = var.default_route_table_association
+
+  // Enable default route table propagation
+  default_route_table_propagation = var.default_route_table_propagation
+
+  // Enable DNS support
+  dns_support = var.dns_support
+
+  // Enable VPN ECMP support
+  vpn_ecmp_support = var.vpn_ecmp_support
+
+  // Enable multi-region support
+  amazon_side_asn = var.amazon_side_asn
 }
 
-// Output the ID of the created Transit Gateway
 output "transit_gateway_id" {
-  value = aws_ec2_transit_gateway.example.id
+  value = aws_ec2_transit_gateway.this.id
+  description = "The ID of the Transit Gateway"
 }
+```
 
-// Variables for the module
+```hcl
 variable "region" {
-  description = "The AWS region to deploy resources"
+  description = "The AWS region to deploy the Transit Gateway"
   type        = string
 }
 
-variable "transit_gateway_description" {
-  description = "Description for the AWS Transit Gateway"
+variable "description" {
+  description = "A description for the Transit Gateway"
   type        = string
-  default     = "Example Transit Gateway"
+  default     = "My Transit Gateway"
 }
 
-variable "tags" {
-  description = "A map of tags to assign to the Transit Gateway"
-  type        = map(string)
-  default     = {}
+variable "default_route_table_association" {
+  description = "Enable or disable automatic association with the default route table"
+  type        = string
+  default     = "enable"
+}
+
+variable "default_route_table_propagation" {
+  description = "Enable or disable automatic propagation to the default route table"
+  type        = string
+  default     = "enable"
+}
+
+variable "dns_support" {
+  description = "Enable or disable DNS support"
+  type        = string
+  default     = "enable"
+}
+
+variable "vpn_ecmp_support" {
+  description = "Enable or disable VPN Equal Cost Multi-Path (ECMP) support"
+  type        = string
+  default     = "enable"
+}
+
+variable "amazon_side_asn" {
+  description = "The Autonomous System Number (ASN) for the Amazon side"
+  type        = number
+  default     = 64512
 }
